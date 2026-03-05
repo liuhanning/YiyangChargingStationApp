@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>弋阳县充电桩规划数据仪表盘</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Microsoft YaHei',Arial,sans-serif;background:#0d1117;color:#e6edf3}
+  .header{background:linear-gradient(135deg,#1a6b3c 0%,#0d4d2c 100%);padding:24px 32px;border-bottom:2px solid #238636}
+  .header h1{font-size:24px;font-weight:700;letter-spacing:2px}
+  .header p{font-size:13px;color:#7ee787;margin-top:6px}
+  .kpi-row{display:flex;gap:16px;padding:20px 32px;flex-wrap:wrap}
+  .kpi{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:16px 24px;flex:1;min-width:160px;text-align:center}
+  .kpi .val{font-size:36px;font-weight:700;color:#58a6ff}
+  .kpi .lbl{font-size:12px;color:#8b949e;margin-top:4px}
+  .kpi .sub{font-size:11px;color:#3fb950;margin-top:2px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;padding:0 32px 16px}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:0 32px 16px}
+  .card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:16px}
+  .card h3{font-size:13px;color:#8b949e;margin-bottom:12px;border-bottom:1px solid #21262d;padding-bottom:8px}
+  .chart{width:100%;height:320px}
+  .chart-tall{width:100%;height:400px}
+  .full-card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:16px;margin:0 32px 16px}
+  .table-wrap{overflow-x:auto;margin-top:8px}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{background:#21262d;color:#8b949e;padding:8px 12px;text-align:left;border-bottom:1px solid #30363d}
+  td{padding:7px 12px;border-bottom:1px solid #21262d;color:#c9d1d9}
+  tr:hover td{background:#1c2128}
+  .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px}
+  .tag-green{background:#1a3a1a;color:#3fb950;border:1px solid #238636}
+  .tag-blue{background:#0d2035;color:#58a6ff;border:1px solid #1f6feb}
+  .tag-orange{background:#2d1b00;color:#f0883e;border:1px solid #9e6a03}
+  footer{text-align:center;padding:20px;font-size:11px;color:#484f58}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>弋阳县充换电设施规划数据仪表盘</h1>
+  <p>数据来源：弋阳县充换电申报材料 · 生成时间：2026-03-05</p>
+</div>
+
+<!-- KPI 卡片 -->
+<div class="kpi-row">
+  <div class="kpi"><div class="val">44</div><div class="lbl">现有充电桩（台）</div><div class="sub">覆盖 11 个乡镇</div></div>
+  <div class="kpi"><div class="val">63</div><div class="lbl">2026年规划新增（台）</div><div class="sub">正在申报建设</div></div>
+  <div class="kpi"><div class="val">65</div><div class="lbl">2026-2028规划总量（台）</div><div class="sub">总功率 7460 kW</div></div>
+  <div class="kpi"><div class="val">26</div><div class="lbl">加油站总数（座）</div><div class="sub">其中 5 座已有充电设施</div></div>
+  <div class="kpi"><div class="val">0.3225<span style="font-size:16px">万辆</span></div><div class="lbl">新能源车保有量（2025）</div><div class="sub">全县汽车 5.986 万辆</div></div>
+  <div class="kpi"><div class="val">203.94<span style="font-size:16px">亿</span></div><div class="lbl">GDP（2025年）</div><div class="sub">常住人口约 32.94 万人</div></div>
+</div>
+
+<!-- 图表行1 -->
+<div class="grid">
+  <div class="card">
+    <h3>📈 弋阳县历年新能源车 & 汽车保有量趋势</h3>
+    <div id="chart_eco" class="chart"></div>
+  </div>
+  <div class="card">
+    <h3>🏘️ 各乡镇现有充电桩数量分布</h3>
+    <div id="chart_township" class="chart"></div>
+  </div>
+</div>
+
+<!-- 图表行2 -->
+<div class="grid">
+  <div class="card">
+    <h3>📅 2026-2028规划充电桩 - 按年度 & 乡镇分布</h3>
+    <div id="chart_plan_year" class="chart"></div>
+  </div>
+  <div class="card">
+    <h3>🏷️ 规划充电桩应用场景分布</h3>
+    <div id="chart_scene" class="chart"></div>
+  </div>
+</div>
+
+<!-- 图表行3 -->
+<div class="grid-3">
+  <div class="card">
+    <h3>💰 弋阳县历年GDP增长</h3>
+    <div id="chart_gdp" class="chart"></div>
+  </div>
+  <div class="card">
+    <h3>⛽ 加油站改造潜力（是否有充电设施）</h3>
+    <div id="chart_gas" class="chart"></div>
+  </div>
+  <div class="card">
+    <h3>🔌 现状充电设施应用场景（2025年）</h3>
+    <div id="chart_scene25" class="chart"></div>
+  </div>
+</div>
+
+<!-- 城区充电站地图占位（坐标表格） -->
+<div class="full-card">
+  <h3>📍 城区充电站坐标信息（16座，已对接高德地图格式）</h3>
+  <div class="table-wrap">
+    <table>
+      <tr><th>#</th><th>场站名称</th><th>详细地址</th><th>高德经度</th><th>高德纬度</th></tr>
+      <tr><td>1</td><td>弋阳一中充电站</td><td>江西省上饶市弋阳县弋阳县第一中内学生宿舍旁停车场</td><td>117.434497</td><td>28.4080807</td></tr><tr><td>2</td><td>方志敏干部学院充电站</td><td>江西省上饶市弋阳县方志敏干部学院内9号楼旁停车场</td><td>117.440395</td><td>28.363804</td></tr><tr><td>3</td><td>龟峰景区充电站</td><td>江西省上饶市弋阳县龟峰景区停车场（入口左侧）</td><td>117.40726</td><td>28.331567</td></tr><tr><td>4</td><td>龟峰芳草地度假酒店充电站</td><td>江西省上饶市弋阳县龟峰芳草地度假酒店入口处湖边停车场</td><td>117.393898</td><td>28.324005</td></tr><tr><td>5</td><td>弋阳县人民医院充电站</td><td>江西省上饶市弋阳县人民医院停车场东北侧</td><td>117.456042</td><td>28.366339</td></tr><tr><td>6</td><td>生态园江边充电站</td><td>江西省上饶市弋阳县滨江路与上堡路路口处停车场（生态园江边停车场东侧）</td><td>117.437407</td><td>28.401206</td></tr><tr><td>7</td><td>秋收果蔬基地充电站</td><td>江西省上饶市弋阳县中国石化弋阳莲塘加油站后面停车场（秋收果蔬基地门口右侧）</td><td>117.305472</td><td>28.30694</td></tr><tr><td>8</td><td>桃源里小区充电站</td><td>江西省上饶市弋阳县桃源里小区门口驿站停车场</td><td>117.440961</td><td>28.410455</td></tr><tr><td>9</td><td>宏达小区充电站</td><td>江西省上饶市弋阳县桂花园与宏达小区后面停车场</td><td>117.429852</td><td>28.403998</td></tr><tr><td>10</td><td>城市驿站（饶城e家）充电站</td><td>江西省上饶市弋阳县叠山路8号城市驿站（饶城e家）旁停车场</td><td>117.450481</td><td>28.389515</td></tr><tr><td>11</td><td>城市驿站（6）充电站</td><td>江西省上饶市弋阳县华东师范大学弋阳实验学校南门停车场（弋阳县公安局湖塘路警务站后）</td><td>117.457716</td><td>28.367392</td></tr><tr><td>12</td><td>广场社区爱心驿站充电站</td><td>江西省上饶市弋阳县后港路与方志敏大道交叉口西40米弋阳县工会户外服务站点广场社区爱心驿站（工会驿站）旁停车场（弋阳县中国石化志敏加油站后）</td><td>117.435811</td><td>28.408695</td></tr><tr><td>13</td><td>凤凰大道充电站</td><td>江西省上饶市弋阳县式平大道与凤凰大道以东交叉口驿站旁停车场</td><td>117.438429</td><td>28.391902</td></tr><tr><td>14</td><td>怡馨小区充电站</td><td>江西省上饶市弋阳县怡馨保障性住房小区北50米停车场（湾里路西）</td><td>117.425558</td><td>28.418109</td></tr><tr><td>15</td><td>信江新天地充电站</td><td>江西省上饶市弋阳县滨江路信江新天地后侧停车场</td><td>117.434402</td><td>28.398931</td></tr><tr><td>16</td><td>南岩一号充电站</td><td>江西省上饶市弋阳县香槟国际公馆（南门）停车场（南岩一号旁停车场）</td><td>117.451669</td><td>28.378733</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- 规划清单详情表 -->
+<div class="full-card">
+  <h3>📋 2026-2028年充电站规划清单（34 个站点）</h3>
+  <div class="table-wrap">
+    <table>
+      <tr><th>乡镇</th><th>年度</th><th>场景</th><th>站点名称</th><th>桩数（台）</th><th>功率（kW）</th><th>设备容量</th></tr>
+      <tr>
+        <td>弋江</td>
+        <td><span class="tag tag-orange">-</span></td>
+        <td>单位停车场</td>
+        <td>***县***镇小康路，行政服务中心</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增1250kVA箱变</td>
+      </tr><tr>
+        <td>弋江</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>式平路边停车场（湾里路）</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>弋江</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>广场社区办公楼旁停车场</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">1</td>
+        <td style="text-align:center">120</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>弋江</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>大桥洞以北两侧</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>弋江</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>单位停车场</td>
+        <td>方志敏纪念馆内</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">1</td>
+        <td style="text-align:center">120</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>弋江</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>老财政局平面停车场</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>弋江</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>老社保局平面停车场（方格尔停车场）</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>弋江</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>长卿路北街社区旁（方格尔停车场）</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>弋江</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>单位停车场</td>
+        <td>中医院停车场</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>弋江</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>杨桥路方格尔停车场（中国银行对面）</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>弋江</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>弋江镇叠山广场</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>弋江</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>西街停车场一</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>弋江</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>西街停车场二</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>弋江</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>西街停车场三</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>弋江</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>滨江公园洲上公园平面停车场</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>南岩</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>信江生态新天地南侧停车场</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">引自新天地内部低压电源</td>
+      </tr><tr>
+        <td>南岩</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>东鑫公馆以东</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>南岩</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>单位停车场</td>
+        <td>谢叠山中学</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>南岩</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>单位停车场</td>
+        <td>弋阳县卫生健康委员会</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">120</td>
+        <td style="font-size:11px;color:#8b949e">电源引自临近低压电（剩余容量160KW）</td>
+      </tr><tr>
+        <td>南岩</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>单位停车场</td>
+        <td>弋阳博物馆</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>南岩</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>府前社区方志敏公园（广和明月苑）</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">160</td>
+        <td style="font-size:11px;color:#8b949e">引 自现有630KVA箱变</td>
+      </tr><tr>
+        <td>南岩</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>乐江首府以北</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>南岩</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>单位停车场</td>
+        <td>开湘中学</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">1</td>
+        <td style="text-align:center">120</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>南岩</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>单位停车场</td>
+        <td>南岩镇镇府大院内</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">1</td>
+        <td style="text-align:center">120</td>
+        <td style="font-size:11px;color:#8b949e">引 自现有800KVA箱变</td>
+      </tr><tr>
+        <td>南岩</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>南岩镇政府旁11号楼停车场</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">引自现有3台1000KVA箱变</td>
+      </tr><tr>
+        <td>南岩</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>府前社区新洲商博城</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">3</td>
+        <td style="text-align:center">360</td>
+        <td style="font-size:11px;color:#8b949e">3台充电桩分别引自现有3台630KVA箱变</td>
+      </tr><tr>
+        <td>南岩</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>弋阳沁庐君澜大饭店</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">4</td>
+        <td style="text-align:center">480</td>
+        <td style="font-size:11px;color:#8b949e">引自酒店2台2500KVA箱变</td>
+      </tr><tr>
+        <td>花亭</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>产业集聚区</td>
+        <td>弋阳县现代农业示范区（葛河之心）</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">180</td>
+        <td style="font-size:11px;color:#8b949e">电源引自临近低压电源
+（园区内现有一台3150KVA变压器，考虑更换一台小容量变压器）</td>
+      </tr><tr>
+        <td>桃源</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>集聚点</td>
+        <td>桃源街道淝塘岗小区</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>桃源</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>集聚点</td>
+        <td>桃源街道双停社区</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">160</td>
+        <td style="font-size:11px;color:#8b949e">引自现有2台630KVA箱变</td>
+      </tr><tr>
+        <td>桃源</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>东投学仕府小区旁公共停车场</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>桃源</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>社会停车场</td>
+        <td>建岭社区菜场小区</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>桃源</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>集聚点</td>
+        <td>桃源街道居委会</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">2</td>
+        <td style="text-align:center">240</td>
+        <td style="font-size:11px;color:#8b949e">新增一台315KVA箱变</td>
+      </tr><tr>
+        <td>三县岭</td>
+        <td><span class="tag tag-green">2026</span></td>
+        <td>产业集聚区</td>
+        <td>新材料产业园内</td>
+        <td style="text-align:center;font-weight:bold;color:#58a6ff">-</td>
+        <td style="text-align:center">-</td>
+        <td style="font-size:11px;color:#8b949e">-</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- 加油站详情表 -->
+<div class="full-card">
+  <h3>⛽ 弋阳县加油站详情（2024年，共 26 座）</h3>
+  <div class="table-wrap">
+    <table>
+      <tr><th>加油站名称</th><th>地址</th><th>位置类型</th><th>汽油(吨)</th><th>柴油(吨)</th><th>合计(吨)</th><th>储油(m³)</th><th>有充电设施</th><th>油品收入(万元)</th></tr>
+      <tr>
+        <td>城南加油站</td>
+        <td style="font-size:11px">弋阳县南岩镇志敏大道旁</td>
+        <td style="font-size:11px">城区</td>
+        <td style="text-align:right">5619</td>
+        <td style="text-align:right">301</td>
+        <td style="text-align:right;font-weight:bold">5921</td>
+        <td style="text-align:right">120</td>
+        <td style="text-align:center"><span class='tag tag-green'>已有</span></td>
+        <td style="text-align:right">6031</td>
+      </tr><tr>
+        <td>第八加油站</td>
+        <td style="font-size:11px">弋阳县圭峰镇莲塘岗320国道</td>
+        <td style="font-size:11px">省道国道</td>
+        <td style="text-align:right">356</td>
+        <td style="text-align:right">1446</td>
+        <td style="text-align:right;font-weight:bold">1802</td>
+        <td style="text-align:right">120</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">1605</td>
+      </tr><tr>
+        <td>第五加油站</td>
+        <td style="font-size:11px">弋阳县南岩镇下湖村</td>
+        <td style="font-size:11px">省道国道</td>
+        <td style="text-align:right">542</td>
+        <td style="text-align:right">292</td>
+        <td style="text-align:right;font-weight:bold">834</td>
+        <td style="text-align:right">120</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">806</td>
+      </tr><tr>
+        <td>第六加油站</td>
+        <td style="font-size:11px">弋阳县圭峰镇汤家山</td>
+        <td style="font-size:11px">省道国道</td>
+        <td style="text-align:right">771</td>
+        <td style="text-align:right">1051</td>
+        <td style="text-align:right;font-weight:bold">1822</td>
+        <td style="text-align:right">160</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">1807</td>
+      </tr><tr>
+        <td>叠山加油站</td>
+        <td style="font-size:11px">弋阳县叠山镇</td>
+        <td style="font-size:11px">县乡道农网</td>
+        <td style="text-align:right">469</td>
+        <td style="text-align:right">245</td>
+        <td style="text-align:right;font-weight:bold">714</td>
+        <td style="text-align:right">90</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">830</td>
+      </tr><tr>
+        <td>箭竹加油站</td>
+        <td style="font-size:11px">弋阳县圭峰镇坝头村</td>
+        <td style="font-size:11px">县乡道农网</td>
+        <td style="text-align:right">438</td>
+        <td style="text-align:right">144</td>
+        <td style="text-align:right;font-weight:bold">582</td>
+        <td style="text-align:right">40</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">547</td>
+      </tr><tr>
+        <td>漆工加油站</td>
+        <td style="font-size:11px">弋阳县漆工镇老瓦山</td>
+        <td style="font-size:11px">县乡道农网</td>
+        <td style="text-align:right">882</td>
+        <td style="text-align:right">457</td>
+        <td style="text-align:right;font-weight:bold">1340</td>
+        <td style="text-align:right">90</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">1401</td>
+      </tr><tr>
+        <td>第七加油站</td>
+        <td style="font-size:11px">弋阳县圭峰镇桐子岭</td>
+        <td style="font-size:11px">省道国道</td>
+        <td style="text-align:right">715</td>
+        <td style="text-align:right">249</td>
+        <td style="text-align:right;font-weight:bold">964</td>
+        <td style="text-align:right">120</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">957</td>
+      </tr><tr>
+        <td>志敏加油站</td>
+        <td style="font-size:11px">弋阳县志敏大道北端西侧</td>
+        <td style="font-size:11px">城区</td>
+        <td style="text-align:right">2760</td>
+        <td style="text-align:right">510</td>
+        <td style="text-align:right;font-weight:bold">3270</td>
+        <td style="text-align:right">120</td>
+        <td style="text-align:center"><span class='tag tag-green'>已有</span></td>
+        <td style="text-align:right">3161</td>
+      </tr><tr>
+        <td>中畈加油站</td>
+        <td style="font-size:11px">弋阳县中畈乡政府旁</td>
+        <td style="font-size:11px">县乡道农网</td>
+        <td style="text-align:right">187</td>
+        <td style="text-align:right">336</td>
+        <td style="text-align:right;font-weight:bold">523</td>
+        <td style="text-align:right">40</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">497</td>
+      </tr><tr>
+        <td>湾里加油站</td>
+        <td style="font-size:11px">弋阳县湾里乡葛家村</td>
+        <td style="font-size:11px">省道国道</td>
+        <td style="text-align:right">1098</td>
+        <td style="text-align:right">658</td>
+        <td style="text-align:right;font-weight:bold">1756</td>
+        <td style="text-align:right">120</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">1686</td>
+      </tr><tr>
+        <td>南岩加油站</td>
+        <td style="font-size:11px">弋阳县南岩镇311高速挂线</td>
+        <td style="font-size:11px">县乡道农网</td>
+        <td style="text-align:right">1210</td>
+        <td style="text-align:right">1009</td>
+        <td style="text-align:right;font-weight:bold">2219</td>
+        <td style="text-align:right">120</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">2309</td>
+      </tr><tr>
+        <td>长源加油站</td>
+        <td style="font-size:11px">弋阳县乐姜公路东站油库段</td>
+        <td style="font-size:11px">省道国道</td>
+        <td style="text-align:right">1713</td>
+        <td style="text-align:right">1287</td>
+        <td style="text-align:right;font-weight:bold">3000</td>
+        <td style="text-align:right">120</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">3040</td>
+      </tr><tr>
+        <td>海螺加油站</td>
+        <td style="font-size:11px">弋阳县三县岭龙家村205省道旁</td>
+        <td style="font-size:11px">省道国道</td>
+        <td style="text-align:right">863</td>
+        <td style="text-align:right">1160</td>
+        <td style="text-align:right;font-weight:bold">2023</td>
+        <td style="text-align:right">120</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">2066</td>
+      </tr><tr>
+        <td>工业园区加油站</td>
+        <td style="font-size:11px">弋阳县弋阳大道以西、展望大道以北</td>
+        <td style="font-size:11px">其他</td>
+        <td style="text-align:right">2467</td>
+        <td style="text-align:right">1102</td>
+        <td style="text-align:right;font-weight:bold">3568</td>
+        <td style="text-align:right">120</td>
+        <td style="text-align:center"><span class='tag tag-green'>已有</span></td>
+        <td style="text-align:right">3640</td>
+      </tr><tr>
+        <td>上万高速挂线加油站</td>
+        <td style="font-size:11px">弋阳县上万高速弋阳东收费站东南侧</td>
+        <td style="font-size:11px">县乡道农网</td>
+        <td style="text-align:right">559</td>
+        <td style="text-align:right">404</td>
+        <td style="text-align:right;font-weight:bold">963</td>
+        <td style="text-align:right">120</td>
+        <td style="text-align:center"><span class='tag tag-green'>已有</span></td>
+        <td style="text-align:right">990</td>
+      </tr><tr>
+        <td>徐家垅加油站</td>
+        <td style="font-size:11px">弋阳县乐江大道东侧、徐家垅水库西侧</td>
+        <td style="font-size:11px">城区</td>
+        <td style="text-align:right">2469</td>
+        <td style="text-align:right">712</td>
+        <td style="text-align:right;font-weight:bold">3182</td>
+        <td style="text-align:right">120</td>
+        <td style="text-align:center"><span class='tag tag-green'>已有</span></td>
+        <td style="text-align:right">3177</td>
+      </tr><tr>
+        <td>江西高速石化有限责任公司上万高速弋阳服务区西加油站</td>
+        <td style="font-size:11px">弋阳县葛溪乡葛溪村上万高速弋阳服务区内</td>
+        <td style="font-size:11px">高速公路</td>
+        <td style="text-align:right">926</td>
+        <td style="text-align:right">226</td>
+        <td style="text-align:right;font-weight:bold">1153</td>
+        <td style="text-align:right">200</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">1204</td>
+      </tr><tr>
+        <td>江西高速石化有限责任公司上万高速弋阳服务区东加油站</td>
+        <td style="font-size:11px">弋阳县葛溪乡葛溪村上万高速弋阳服务区内</td>
+        <td style="font-size:11px">高速公路</td>
+        <td style="text-align:right">983</td>
+        <td style="text-align:right">271</td>
+        <td style="text-align:right;font-weight:bold">1254</td>
+        <td style="text-align:right">200</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">1426</td>
+      </tr><tr>
+        <td>中石油上饶弋阳沪昆挂线加油站</td>
+        <td style="font-size:11px">江西省上饶市弋阳县沪昆高速新出口挂线公路西侧</td>
+        <td style="font-size:11px">省道国道</td>
+        <td style="text-align:right">1839</td>
+        <td style="text-align:right">7411</td>
+        <td style="text-align:right;font-weight:bold">9250</td>
+        <td style="text-align:right">190</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">7007</td>
+      </tr><tr>
+        <td>中石油上饶弋阳江浙加油站</td>
+        <td style="font-size:11px">江西省上饶市弋阳县南岩镇光辉村</td>
+        <td style="font-size:11px">省道国道</td>
+        <td style="text-align:right">177</td>
+        <td style="text-align:right">861</td>
+        <td style="text-align:right;font-weight:bold">1038</td>
+        <td style="text-align:right">120</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">768</td>
+      </tr><tr>
+        <td>中石油上饶弋阳花亭慧丰加油站</td>
+        <td style="font-size:11px">江西省上饶市弋阳县花亭乡弋漆公路旁</td>
+        <td style="font-size:11px">县乡道农网</td>
+        <td style="text-align:right">1062</td>
+        <td style="text-align:right">742</td>
+        <td style="text-align:right;font-weight:bold">1803</td>
+        <td style="text-align:right">90</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">1508</td>
+      </tr><tr>
+        <td>弋阳县曹溪镇加油站</td>
+        <td style="font-size:11px">弋阳县曹溪镇曹溪村杨林弋乐公路东侧</td>
+        <td style="font-size:11px">省道国道</td>
+        <td style="text-align:right">145</td>
+        <td style="text-align:right">821</td>
+        <td style="text-align:right;font-weight:bold">966</td>
+        <td style="text-align:right">120</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">698</td>
+      </tr><tr>
+        <td>弋阳县弋乐加油站（个人独资）</td>
+        <td style="font-size:11px">江西省上饶市弋阳县中畈乡扎马山</td>
+        <td style="font-size:11px">省道国道</td>
+        <td style="text-align:right">-</td>
+        <td style="text-align:right">-</td>
+        <td style="text-align:right;font-weight:bold">-</td>
+        <td style="text-align:right">149</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">-</td>
+      </tr><tr>
+        <td>弋阳县顺风加油站</td>
+        <td style="font-size:11px">曹溪镇邵畈（东山）</td>
+        <td style="font-size:11px">省道国道</td>
+        <td style="text-align:right">-</td>
+        <td style="text-align:right">-</td>
+        <td style="text-align:right;font-weight:bold">-</td>
+        <td style="text-align:right">112</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">800</td>
+      </tr><tr>
+        <td>弋阳县烈桥加油站</td>
+        <td style="font-size:11px">弋阳县烈桥上德公里旁</td>
+        <td style="font-size:11px">省道国道</td>
+        <td style="text-align:right">-</td>
+        <td style="text-align:right">-</td>
+        <td style="text-align:right;font-weight:bold">-</td>
+        <td style="text-align:right">90</td>
+        <td style="text-align:center"><span style='color:#484f58'>—</span></td>
+        <td style="text-align:right">622</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<footer>弋阳县充换电设施规划项目 · 数据整理版本 v1.0 · 2026-03-05</footer>
+
+<script>
+// ── 图1：新能源车趋势 ─────────────────────────────────
+var c1 = echarts.init(document.getElementById('chart_eco'));
+c1.setOption({
+  tooltip:{trigger:'axis'},
+  legend:{data:['汽车保有量(万辆)','新能源车保有量(万辆)'],textStyle:{color:'#8b949e'}},
+  grid:{top:40,bottom:40,left:50,right:20},
+  xAxis:{type:'category',data:[2016, 2017, 2018, 2019, 2020, 2021, 2022, 2025],axisLabel:{color:'#8b949e'}},
+  yAxis:[
+    {type:'value',name:'汽车保有量',axisLabel:{color:'#8b949e',formatter:'{value}'},splitLine:{lineStyle:{color:'#21262d'}}},
+    {type:'value',name:'新能源',axisLabel:{color:'#8b949e',formatter:'{value}'},splitLine:{show:false}}
+  ],
+  series:[
+    {name:'汽车保有量(万辆)',type:'bar',data:[2.6993, 3.2769, 3.8335, 4.1705, 4.5833, 4.9061, 5.1973, 5.986],
+      itemStyle:{color:'#1f6feb'}},
+    {name:'新能源车保有量(万辆)',type:'line',yAxisIndex:1,
+      data:[0.0032, 0.0045, 0.0065, 0.0105, 0.0146, 0.023, 0.0335, 0.3225],
+      itemStyle:{color:'#3fb950'},lineStyle:{width:3},symbol:'circle',symbolSize:8}
+  ]
+});
+
+// ── 图2：各乡镇充电桩 ─────────────────────────────────
+var c2 = echarts.init(document.getElementById('chart_township'));
+var twn_data = [["\u5357\u5ca9\u9547", 24], ["\u53e0\u5c71", 2], ["\u572d\u5cf0", 2], ["\u65ed\u5149", 2], ["\u66f9\u6eaa", 2], ["\u6a1f\u6811\u58a9", 2], ["\u6e05\u6e56", 2], ["\u6e2f\u53e3", 2], ["\u6e7e\u91cc", 2], ["\u6f06\u5de5", 2], ["\u82b1\u4ead", 2]];
+twn_data.sort((a,b)=>b[1]-a[1]);
+c2.setOption({
+  tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+  grid:{top:20,bottom:70,left:60,right:20},
+  xAxis:{type:'category',data:twn_data.map(d=>d[0]),axisLabel:{color:'#8b949e',rotate:30}},
+  yAxis:{type:'value',axisLabel:{color:'#8b949e'},splitLine:{lineStyle:{color:'#21262d'}}},
+  series:[{
+    type:'bar',data:twn_data.map(d=>d[1]),
+    itemStyle:{color:function(p){
+      var c=['#58a6ff','#3fb950','#f0883e','#a371f7','#ff7b72','#ffa657','#79c0ff'];
+      return c[p.dataIndex%c.length];
+    }},
+    label:{show:true,position:'top',color:'#e6edf3',fontSize:11}
+  }]
+});
+
+// ── 图3：规划桩数量 按年度 & 乡镇 ────────────────────
+var c3 = echarts.init(document.getElementById('chart_plan_year'));
+var planData = [["\u4e09\u53bf\u5cad", 0.0], ["\u5357\u5ca9", 25.0], ["\u5f0b\u6c5f", 28.0], ["\u6843\u6e90", 10.0], ["\u82b1\u4ead", 2.0]];
+planData.sort((a,b)=>b[1]-a[1]);
+c3.setOption({
+  tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+  grid:{top:20,bottom:70,left:60,right:20},
+  xAxis:{type:'category',data:planData.map(d=>d[0]),axisLabel:{color:'#8b949e',rotate:30}},
+  yAxis:{type:'value',axisLabel:{color:'#8b949e'},splitLine:{lineStyle:{color:'#21262d'}}},
+  series:[{
+    type:'bar',data:planData.map(d=>d[1]),
+    itemStyle:{color:'#a371f7'},
+    label:{show:true,position:'top',color:'#e6edf3',fontSize:11}
+  }]
+});
+
+// ── 图4：规划应用场景饼图 ─────────────────────────────
+var c4 = echarts.init(document.getElementById('chart_scene'));
+c4.setOption({
+  tooltip:{trigger:'item',formatter:'{b}: {c}台 ({d}%)'},
+  legend:{orient:'vertical',left:'left',textStyle:{color:'#8b949e',fontSize:11}},
+  series:[{
+    type:'pie',radius:['35%','70%'],center:['60%','50%'],
+    data:[{"name": "\u4ea7\u4e1a\u96c6\u805a\u533a", "value": 2}, {"name": "\u5355\u4f4d\u505c\u8f66\u573a", "value": 13}, {"name": "\u793e\u4f1a\u505c\u8f66\u573a", "value": 44}, {"name": "\u96c6\u805a\u70b9", "value": 6}],
+    itemStyle:{borderColor:'#0d1117',borderWidth:2},
+    label:{color:'#e6edf3',fontSize:11}
+  }]
+});
+
+// ── 图5：GDP折线 ──────────────────────────────────────
+var eco_gdp = [[2018.0, 117.7], [2019.0, 162.3], [2020.0, 137.9], [2021.0, 157.3], [2022.0, 167.2], [2023.0, 178.2], [2024.0, 192.46], [2025.0, 203.94]];
+var c5 = echarts.init(document.getElementById('chart_gdp'));
+c5.setOption({
+  tooltip:{trigger:'axis',formatter:params=>params[0].name+'年: '+params[0].value+'亿元'},
+  grid:{top:20,bottom:40,left:60,right:20},
+  xAxis:{type:'category',data:eco_gdp.map(d=>d[0]),axisLabel:{color:'#8b949e'}},
+  yAxis:{type:'value',axisLabel:{color:'#8b949e',formatter:'{value}亿'},splitLine:{lineStyle:{color:'#21262d'}}},
+  series:[{
+    type:'line',data:eco_gdp.map(d=>d[1]),
+    itemStyle:{color:'#f0883e'},lineStyle:{width:3},
+    areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'rgba(240,136,62,0.4)'},{offset:1,color:'rgba(240,136,62,0)'}]}},
+    symbol:'circle',symbolSize:6
+  }]
+});
+
+// ── 图6：加油站改造饼图 ──────────────────────────────
+var c6 = echarts.init(document.getElementById('chart_gas'));
+c6.setOption({
+  tooltip:{trigger:'item',formatter:'{b}: {c}座 ({d}%)'},
+  series:[{
+    type:'pie',radius:'70%',
+    data:[
+      {value:5,name:'已有充电设施',itemStyle:{color:'#3fb950'}},
+      {value:21,name:'待改造升级',itemStyle:{color:'#484f58'}}
+    ],
+    label:{color:'#e6edf3',formatter:'{b}\n{c}座'},
+    itemStyle:{borderColor:'#0d1117',borderWidth:2}
+  }]
+});
+
+// ── 图7：现状应用场景 ─────────────────────────────────
+var c7 = echarts.init(document.getElementById('chart_scene25'));
+var s25 = [{"name": "\u5355\u4f4d\u505c\u8f66\u573a", "value": 46}, {"name": "\u793e\u4f1a\u505c\u8f66\u573a", "value": 28}];
+c7.setOption({
+  tooltip:{trigger:'item',formatter:'{b}: {c}台 ({d}%)'},
+  series:[{
+    type:'pie',radius:['30%','65%'],
+    data:s25,
+    itemStyle:{borderColor:'#0d1117',borderWidth:2},
+    label:{color:'#e6edf3',fontSize:10}
+  }]
+});
+
+// 响应式
+window.addEventListener('resize',function(){
+  [c1,c2,c3,c4,c5,c6,c7].forEach(c=>c.resize());
+});
+</script>
+</body>
+</html>

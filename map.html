@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>弋阳县充换电设施规划地图（天地图）</title>
+<script src="http://api.tianditu.gov.cn/api?v=4.0&tk=36c2c7b1a00180d86e97fa8ca2cd3bf2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Microsoft YaHei',Arial,sans-serif;background:#f0f2f5;overflow:hidden}
+
+#header{
+  height:52px;
+  background:linear-gradient(135deg,#ffffff 0%,#f0f7ff 100%);
+  color:#1a3a5c;padding:0 24px;display:flex;align-items:center;
+  justify-content:space-between;
+  border-bottom:2px solid #3388cc;
+  position:relative;z-index:200;
+  box-shadow:0 2px 8px rgba(0,0,0,0.08);
+}
+#header h1{font-size:17px;letter-spacing:1px;font-weight:700;color:#1a3a5c}
+#header p{font-size:11px;color:#5a8bb5}
+
+#map{width:100%;height:calc(100vh - 52px);position:relative;z-index:1}
+
+/* 加载提示 */
+#loading-overlay{
+  position:fixed;top:52px;left:0;right:0;bottom:0;z-index:500;
+  background:rgba(255,255,255,0.85);
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity 0.6s ease;
+}
+#loading-overlay.hide{opacity:0;pointer-events:none}
+#loading-text{
+  background:rgba(40,40,40,0.85);color:#fff;
+  padding:14px 36px;border-radius:8px;font-size:14px;
+  letter-spacing:2px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.2);
+}
+
+/* 控制面板 - 浅色主题 */
+.control-panel{
+  position:fixed !important;
+  top:64px;left:12px;z-index:9999 !important;
+  background:rgba(255,255,255,0.96);
+  backdrop-filter:blur(8px);
+  border:1px solid #d0d7de;
+  border-radius:10px;
+  padding:12px;
+  width:210px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.1);
+  pointer-events:auto !important;
+}
+.panel-title{
+  font-size:11px;color:#5a7a96;margin-bottom:8px;
+  font-weight:700;text-transform:uppercase;letter-spacing:0.5px;
+  border-bottom:1px solid #e8ecf0;padding-bottom:6px;
+}
+.mode-btn{
+  width:100%;padding:8px 10px;margin:3px 0;border:1px solid #d8dfe6;
+  border-radius:7px;background:#fff;color:#2c3e50;
+  font-size:12px;cursor:pointer;transition:all .2s;
+  text-align:left;display:flex;align-items:center;gap:8px
+}
+.mode-btn:hover{background:#f0f6fc;border-color:#3388cc}
+.mode-btn.active{background:#e1f0ff;border-color:#3388cc;color:#0969da;font-weight:600}
+
+.layer-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 0;border-bottom:1px solid #eef1f4
+}
+.layer-row:last-child{border-bottom:none}
+.layer-info{display:flex;align-items:center;gap:7px;font-size:12px;color:#2c3e50}
+.dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:1px solid rgba(0,0,0,0.1)}
+
+/* 切换开关 */
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.slider{
+  position:absolute;inset:0;background:#c8d0d8;border-radius:20px;
+  cursor:pointer;transition:.2s
+}
+.slider:before{
+  content:'';position:absolute;width:14px;height:14px;
+  background:#fff;border-radius:50%;bottom:3px;left:3px;transition:.2s;
+  box-shadow:0 1px 3px rgba(0,0,0,0.2)
+}
+input:checked+.slider{background:var(--c,#3fb950)}
+input:checked+.slider:before{transform:translateX(16px)}
+
+/* 信息窗口 */
+.info-window{
+  background:#fff;border:1px solid #d0d7de;border-radius:8px;
+  padding:12px;min-width:200px;max-width:280px;font-size:12px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.12)
+}
+.info-title{font-size:14px;font-weight:bold;color:#1a3a5c;
+  border-bottom:2px solid #e1ecf4;padding-bottom:7px;margin-bottom:7px}
+.info-row{color:#4a6a84;margin:4px 0;line-height:1.6}
+.info-row b{color:#1a3a5c}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;margin-top:2px}
+.badge-green{background:#dafbe1;color:#1a7f37;border:1px solid #4ac26b}
+.badge-blue{background:#ddf4ff;color:#0969da;border:1px solid #54aeff}
+.badge-orange{background:#fff8c5;color:#9a6700;border:1px solid #d4a72c}
+
+/* 统计信息浮窗 */
+#stats-panel{
+  position:fixed;bottom:16px;right:16px;z-index:9999;
+  background:rgba(255,255,255,0.95);
+  backdrop-filter:blur(8px);
+  border:1px solid #d0d7de;border-radius:10px;
+  padding:14px 18px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.1);
+  font-size:12px;color:#2c3e50;line-height:1.8;
+}
+#stats-panel .stats-title{font-weight:700;font-size:13px;color:#1a3a5c;margin-bottom:6px;border-bottom:1px solid #e8ecf0;padding-bottom:4px}
+#stats-panel .stats-row{display:flex;align-items:center;gap:6px}
+#stats-panel .stats-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+#stats-panel .stats-val{font-weight:700;color:#1a3a5c}
+
+/* 图例 */
+#legend{
+  position:fixed;bottom:16px;left:16px;z-index:9999;
+  background:rgba(255,255,255,0.95);
+  backdrop-filter:blur(8px);
+  border:1px solid #d0d7de;border-radius:10px;
+  padding:10px 14px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.1);
+  font-size:11px;color:#2c3e50;
+}
+#legend .legend-title{font-weight:700;font-size:12px;margin-bottom:6px;color:#1a3a5c}
+#legend .legend-item{display:flex;align-items:center;gap:6px;margin:3px 0}
+#legend .legend-icon{width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2)}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div>
+    <h1>🗺️ 弋阳县充换电设施规划地图</h1>
+    <p>天地图 · 弋阳县全域 · 行政区划高亮</p>
+  </div>
+  <div style="font-size:11px;color:#5a8bb5;text-align:right">
+    现有充电站 16 · 加油站 26 · 规划新增 34<br>
+    数据截止 2026-03-05
+  </div>
+</div>
+
+<!-- 加载提示 -->
+<div id="loading-overlay">
+  <div id="loading-text">正在加载地图数据...</div>
+</div>
+
+<div id="map"></div>
+
+<!-- 地图样式选择 -->
+<div class="control-panel" style="top:64px">
+  <div class="panel-title">🗺️ 地图样式</div>
+  <select onchange="changeMapStyle(this.value)" style="width:100%;padding:7px;border:1px solid #d0d7de;border-radius:6px;font-size:12px;background:#fff;color:#2c3e50">
+    <option value="standard">标准地图</option>
+    <option value="satellite">卫星影像</option>
+  </select>
+</div>
+
+<!-- 显示模式 -->
+<div class="control-panel" style="top:148px">
+  <div class="panel-title">📋 显示模式</div>
+  <button class="mode-btn active" onclick="setMode('all')">
+    <span>🗺️</span>全部显示
+  </button>
+  <button class="mode-btn" onclick="setMode('boundary')">
+    <span>📍</span>仅县域边界
+  </button>
+  <button class="mode-btn" onclick="setMode('current')">
+    <span>⚡</span>现状分析
+  </button>
+  <button class="mode-btn" onclick="setMode('planning')">
+    <span>🔋</span>规划视图
+  </button>
+</div>
+
+<!-- 图层控制 -->
+<div class="control-panel" style="top:376px">
+  <div class="panel-title">📂 图层控制</div>
+  <div class="layer-row">
+    <div class="layer-info">
+      <div class="dot" style="background:#2ecc40"></div>
+      现有充电站
+    </div>
+    <label class="toggle" style="--c:#2ecc40">
+      <input type="checkbox" checked onchange="toggleLayer('urban',this.checked)">
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div class="layer-row">
+    <div class="layer-info">
+      <div class="dot" style="background:#e67e22"></div>
+      加油站
+    </div>
+    <label class="toggle" style="--c:#e67e22">
+      <input type="checkbox" checked onchange="toggleLayer('gas',this.checked)">
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div class="layer-row">
+    <div class="layer-info">
+      <div class="dot" style="background:#3498db"></div>
+      规划充电站
+    </div>
+    <label class="toggle" style="--c:#3498db">
+      <input type="checkbox" checked onchange="toggleLayer('plan',this.checked)">
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div class="layer-row">
+    <div class="layer-info">
+      <div class="dot" style="background:#e74c3c;border-radius:2px"></div>
+      县域边界
+    </div>
+    <label class="toggle" style="--c:#e74c3c">
+      <input type="checkbox" checked onchange="toggleBoundary(this.checked)">
+      <span class="slider"></span>
+    </label>
+  </div>
+</div>
+
+<!-- 右下角统计 -->
+<div id="stats-panel">
+  <div class="stats-title">📊 弋阳县充电设施概况</div>
+  <div class="stats-row"><div class="stats-dot" style="background:#2ecc40"></div>现有充电站：<span class="stats-val">16</span> 座（44台）</div>
+  <div class="stats-row"><div class="stats-dot" style="background:#e67e22"></div>加油站：<span class="stats-val">26</span> 座（5座已有充电设施）</div>
+  <div class="stats-row"><div class="stats-dot" style="background:#3498db"></div>规划新增：<span class="stats-val">34</span> 站（65台）</div>
+  <div class="stats-row"><div class="stats-dot" style="background:#9b59b6"></div>规划总功率：<span class="stats-val">7,460</span> kW</div>
+</div>
+
+<!-- 左下角图例 -->
+<div id="legend">
+  <div class="legend-title">📌 图例</div>
+  <div class="legend-item"><div class="legend-icon" style="background:#2ecc40"></div> 现有充电站（精确坐标）</div>
+  <div class="legend-item"><div class="legend-icon" style="background:#e67e22"></div> 加油站（模拟位置）</div>
+  <div class="legend-item"><div class="legend-icon" style="background:#3498db"></div> 规划充电站（模拟位置）</div>
+  <div class="legend-item">
+    <div style="width:20px;height:3px;background:#cc3333;flex-shrink:0;border-radius:2px"></div> 县域边界
+  </div>
+  <div class="legend-item">
+    <div style="width:14px;height:14px;background:rgba(255,255,240,0.6);border:1px solid #ccc;flex-shrink:0;border-radius:2px"></div> 县域范围高亮
+  </div>
+</div>
+
+<script>
+var URBAN = [{"name": "弋阳一中充电站", "addr": "江西省上饶市弋阳县弋阳县第一中内学生宿舍旁停车场", "lng": 117.434497, "lat": 28.4080807}, {"name": "方志敏干部学院充电站", "addr": "江西省上饶市弋阳县方志敏干部学院内9号楼旁停车场", "lng": 117.440395, "lat": 28.363804}, {"name": "龟峰景区充电站", "addr": "江西省上饶市弋阳县龟峰景区停车场（入口左侧）", "lng": 117.40726, "lat": 28.331567}, {"name": "龟峰芳草地度假酒店充电站", "addr": "江西省上饶市弋阳县龟峰芳草地度假酒店入口处湖边停车场", "lng": 117.393898, "lat": 28.324005}, {"name": "弋阳县人民医院充电站", "addr": "江西省上饶市弋阳县人民医院停车场东北侧", "lng": 117.456042, "lat": 28.366339}, {"name": "生态园江边充电站", "addr": "江西省上饶市弋阳县滨江路与上堡路路口处停车场（生态园江边停车场东侧）", "lng": 117.437407, "lat": 28.401206}, {"name": "秋收果蔬基地充电站", "addr": "江西省上饶市弋阳县中国石化弋阳莲塘加油站后面停车场（秋收果蔬基地门口右侧）", "lng": 117.305472, "lat": 28.30694}, {"name": "桃源里小区充电站", "addr": "江西省上饶市弋阳县桃源里小区门口驿站停车场", "lng": 117.440961, "lat": 28.410455}, {"name": "宏达小区充电站", "addr": "江西省上饶市弋阳县桂花园与宏达小区后面停车场", "lng": 117.429852, "lat": 28.403998}, {"name": "城市驿站（饶城e家）充电站", "addr": "江西省上饶市弋阳县叠山路8号城市驿站（饶城e家）旁停车场", "lng": 117.450481, "lat": 28.389515}, {"name": "城市驿站（6）充电站", "addr": "江西省上饶市弋阳县华东师范大学弋阳实验学校南门停车场（弋阳县公安局湖塘路警务站后）", "lng": 117.457716, "lat": 28.367392}, {"name": "广场社区爱心驿站充电站", "addr": "江西省上饶市弋阳县后港路与方志敏大道交叉口西40米弋阳县工会户外服务站点广场社区爱心驿站（工会驿站）旁停车场（弋阳县中国石化志敏加油站后）", "lng": 117.435811, "lat": 28.408695}, {"name": "凤凰大道充电站", "addr": "江西省上饶市弋阳县式平大道与凤凰大道以东交叉口驿站旁停车场", "lng": 117.438429, "lat": 28.391902}, {"name": "怡馨小区充电站", "addr": "江西省上饶市弋阳县怡馨保障性住房小区北50米停车场（湾里路西）", "lng": 117.425558, "lat": 28.418109}, {"name": "信江新天地充电站", "addr": "江西省上饶市弋阳县滨江路信江新天地后侧停车场", "lng": 117.434402, "lat": 28.398931}, {"name": "南岩一号充电站", "addr": "江西省上饶市弋阳县香槟国际公馆（南门）停车场（南岩一号旁停车场）", "lng": 117.451669, "lat": 28.378733}];
+var GAS   = [{"name": "城南加油站", "addr": "弋阳县南岩镇志敏大道旁", "has_ev": true, "sales": 5921.0, "revenue": 6031.0}, {"name": "第八加油站", "addr": "弋阳县圭峰镇莲塘岗320国道", "has_ev": false, "sales": 1802.0, "revenue": 1605.0}, {"name": "第五加油站", "addr": "弋阳县南岩镇下湖村", "has_ev": false, "sales": 834.0, "revenue": 806.0}, {"name": "第六加油站", "addr": "弋阳县圭峰镇汤家山", "has_ev": false, "sales": 1822.0, "revenue": 1807.0}, {"name": "叠山加油站", "addr": "弋阳县叠山镇", "has_ev": false, "sales": 714.0, "revenue": 830.0}, {"name": "箭竹加油站", "addr": "弋阳县圭峰镇坝头村", "has_ev": false, "sales": 582.0, "revenue": 547.0}, {"name": "漆工加油站", "addr": "弋阳县漆工镇老瓦山", "has_ev": false, "sales": 1340.0, "revenue": 1401.0}, {"name": "第七加油站", "addr": "弋阳县圭峰镇桐子岭", "has_ev": false, "sales": 964.0, "revenue": 957.0}, {"name": "志敏加油站", "addr": "弋阳县志敏大道北端西侧", "has_ev": true, "sales": 3270.0, "revenue": 3161.0}, {"name": "中畈加油站", "addr": "弋阳县中畈乡政府旁", "has_ev": false, "sales": 523.0, "revenue": 497.0}, {"name": "湾里加油站", "addr": "弋阳县湾里乡葛家村", "has_ev": false, "sales": 1756.0, "revenue": 1686.0}, {"name": "南岩加油站", "addr": "弋阳县南岩镇311高速挂线", "has_ev": false, "sales": 2219.0, "revenue": 2309.0}, {"name": "长源加油站", "addr": "弋阳县乐姜公路东站油库段", "has_ev": false, "sales": 3000.0, "revenue": 3040.0}, {"name": "海螺加油站", "addr": "弋阳县三县岭龙家村205省道旁", "has_ev": false, "sales": 2023.0, "revenue": 2066.0}, {"name": "工业园区加油站", "addr": "弋阳县弋阳大道以西、展望大道以北", "has_ev": true, "sales": 3568.0, "revenue": 3640.0}, {"name": "上万高速挂线加油站", "addr": "弋阳县上万高速弋阳东收费站东南侧", "has_ev": true, "sales": 963.0, "revenue": 990.0}, {"name": "徐家垅加油站", "addr": "弋阳县乐江大道东侧、徐家垅水库西侧", "has_ev": true, "sales": 3182.0, "revenue": 3177.0}, {"name": "江西高速石化有限责任公司上万高速弋阳服务区西加油站", "addr": "弋阳县葛溪乡葛溪村上万高速弋阳服务区内", "has_ev": false, "sales": 1152.921, "revenue": 1203.76}, {"name": "江西高速石化有限责任公司上万高速弋阳服务区东加油站", "addr": "弋阳县葛溪乡葛溪村上万高速弋阳服务区内", "has_ev": false, "sales": 1254.296, "revenue": 1426.17}, {"name": "中石油上饶弋阳沪昆挂线加油站", "addr": "江西省上饶市弋阳县沪昆高速新出口挂线公路西侧", "has_ev": false, "sales": 9250.0, "revenue": 7006.6}, {"name": "中石油上饶弋阳江浙加油站", "addr": "江西省上饶市弋阳县南岩镇光辉村", "has_ev": false, "sales": 1038.0, "revenue": 768.0}, {"name": "中石油上饶弋阳花亭慧丰加油站", "addr": "江西省上饶市弋阳县花亭乡弋漆公路旁", "has_ev": false, "sales": 1803.0, "revenue": 1508.0}, {"name": "弋阳县曹溪镇加油站", "addr": "弋阳县曹溪镇曹溪村杨林弋乐公路东侧", "has_ev": false, "sales": 966.0, "revenue": 698.0}, {"name": "弋阳县弋乐加油站（个人独资）", "addr": "江西省上饶市弋阳县中畈乡扎马山", "has_ev": false, "sales": 0, "revenue": 0}, {"name": "弋阳县顺风加油站", "addr": "曹溪镇邵畈（东山）", "has_ev": false, "sales": 0, "revenue": 800.0}, {"name": "弋阳县烈桥加油站", "addr": "弋阳县烈桥上德公里旁", "has_ev": false, "sales": 0, "revenue": 622.0}];
+var PLAN  = [{"name": "***县***镇小康路，行政服务中心", "township": "弋江", "scene": "单位停车场", "qty": 2, "power": 240, "year": 2026, "equip": "新增1250kVA箱变"}, {"name": "式平路边停车场（湾里路）", "township": "弋江", "scene": "社会停车场", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "广场社区办公楼旁停车场", "township": "弋江", "scene": "社会停车场", "qty": 1, "power": 120, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "大桥洞以北两侧", "township": "弋江", "scene": "社会停车场", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "方志敏纪念馆内", "township": "弋江", "scene": "单位停车场", "qty": 1, "power": 120, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "老财政局平面停车场", "township": "弋江", "scene": "社会停车场", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "老社保局平面停车场（方格尔停车场）", "township": "弋江", "scene": "社会停车场", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "长卿路北街社区旁（方格尔停车场）", "township": "弋江", "scene": "社会停车场", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "中医院停车场", "township": "弋江", "scene": "单位停车场", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "杨桥路方格尔停车场（中国银行对面）", "township": "弋江", "scene": "社会停车场", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "弋江镇叠山广场", "township": "弋江", "scene": "社会停车场", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "西街停车场一", "township": "弋江", "scene": "社会停车场", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "西街停车场二", "township": "弋江", "scene": "社会停车场", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "西街停车场三", "township": "弋江", "scene": "社会停车场", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "滨江公园洲上公园平面停车场", "township": "弋江", "scene": "社会停车场", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "信江生态新天地南侧停车场", "township": "南岩", "scene": "社会停车场", "qty": 2, "power": 240, "year": 2026, "equip": "引自新天地内部低压电源"}, {"name": "东鑫公馆以东", "township": "南岩", "scene": "社会停车场", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "谢叠山中学", "township": "南岩", "scene": "单位停车场", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "弋阳县卫生健康委员会", "township": "南岩", "scene": "单位停车场", "qty": 2, "power": 120, "year": 2026, "equip": "电源引自临近低压电（剩余容量160KW）"}, {"name": "弋阳博物馆", "township": "南岩", "scene": "单位停车场", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "府前社区方志敏公园（广和明月苑）", "township": "南岩", "scene": "社会停车场", "qty": 2, "power": 160, "year": 2026, "equip": "引 自现有630KVA箱变"}, {"name": "乐江首府以北", "township": "南岩", "scene": "社会停车场", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "开湘中学", "township": "南岩", "scene": "单位停车场", "qty": 1, "power": 120, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "南岩镇镇府大院内", "township": "南岩", "scene": "单位停车场", "qty": 1, "power": 120, "year": 2026, "equip": "引 自现有800KVA箱变"}, {"name": "南岩镇政府旁11号楼停车场", "township": "南岩", "scene": "社会停车场", "qty": 2, "power": 240, "year": 2026, "equip": "引自现有3台1000KVA箱变"}, {"name": "府前社区新洲商博城", "township": "南岩", "scene": "社会停车场", "qty": 3, "power": 360, "year": 2026, "equip": "3台充电桩分别引自现有3台630KVA箱变"}, {"name": "弋阳沁庐君澜大饭店", "township": "南岩", "scene": "社会停车场", "qty": 4, "power": 480, "year": 2026, "equip": "引自酒店2台2500KVA箱变"}, {"name": "弋阳县现代农业示范区（葛河之心）", "township": "花亭", "scene": "产业集聚区", "qty": 2, "power": 180, "year": 2026, "equip": "电源引自临近低压电源\n（园区内现有一台3150KVA变压器，考虑更换一台小容量变压器）"}, {"name": "桃源街道淝塘岗小区", "township": "桃源", "scene": "集聚点", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "桃源街道双停社区", "township": "桃源", "scene": "集聚点", "qty": 2, "power": 160, "year": 2026, "equip": "引自现有2台630KVA箱变"}, {"name": "东投学仕府小区旁公共停车场", "township": "桃源", "scene": "社会停车场", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "建岭社区菜场小区", "township": "桃源", "scene": "社会停车场", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "桃源街道居委会", "township": "桃源", "scene": "集聚点", "qty": 2, "power": 240, "year": 2026, "equip": "新增一台315KVA箱变"}, {"name": "新材料产业园内", "township": "三县岭", "scene": "产业集聚区", "qty": 0, "power": 0, "year": 2026, "equip": ""}];
+var COUNTY_BOUNDARY = [[117.39088, 28.78768], [117.397541, 28.765086], [117.390432, 28.734756], [117.392817, 28.716806], [117.410066, 28.701194], [117.430958, 28.659875], [117.454735, 28.643643], [117.49122, 28.656448], [117.511136, 28.656562], [117.551816, 28.679937], [117.568022, 28.683475], [117.594834, 28.67016], [117.617848, 28.639537], [117.617595, 28.617701], [117.59525, 28.601], [117.576205, 28.560728], [117.545464, 28.546473], [117.528946, 28.53392], [117.507569, 28.528915], [117.514437, 28.50726], [117.513266, 28.47516], [117.524538, 28.467677], [117.508067, 28.462683], [117.499828, 28.432477], [117.506624, 28.415959], [117.519719, 28.420402], [117.527739, 28.414432], [117.531701, 28.416385], [117.541478, 28.424163], [117.555883, 28.431581], [117.557965, 28.429858], [117.556577, 28.427206], [117.558528, 28.424324], [117.563903, 28.385615], [117.563189, 28.36237], [117.570498, 28.356369], [117.548444, 28.335797], [117.531733, 28.327162], [117.516646, 28.303829], [117.489296, 28.328689], [117.463192, 28.321292], [117.449622, 28.308072], [117.475823, 28.284002], [117.468641, 28.267951], [117.462668, 28.248265], [117.490087, 28.239139], [117.509317, 28.213163], [117.489233, 28.200978], [117.506172, 28.180293], [117.487465, 28.181269], [117.480501, 28.16203], [117.480243, 28.151164], [117.472708, 28.144866], [117.468029, 28.11724], [117.482273, 28.103013], [117.470126, 28.081417], [117.449038, 28.079584], [117.435614, 28.108539], [117.406238, 28.11925], [117.363418, 28.131899], [117.33799, 28.130959], [117.320724, 28.1464], [117.285172, 28.147801], [117.27575, 28.174911], [117.277508, 28.182722], [117.277068, 28.222024], [117.291084, 28.23753], [117.293874, 28.242057], [117.296401, 28.242083], [117.297519, 28.247076], [117.292739, 28.254486], [117.285875, 28.264764], [117.283859, 28.272102], [117.279792, 28.274502], [117.282564, 28.276378], [117.282032, 28.278853], [117.263804, 28.280459], [117.260111, 28.280471], [117.261807, 28.283871], [117.257967, 28.284617], [117.258638, 28.295195], [117.261469, 28.312413], [117.281624, 28.315462], [117.28243, 28.333331], [117.30091, 28.344858], [117.321089, 28.349313], [117.317358, 28.357553], [117.324532, 28.386745], [117.314932, 28.423009], [117.326975, 28.454103], [117.317705, 28.454523], [117.323622, 28.466195], [117.318586, 28.4956], [117.311404, 28.523748], [117.306468, 28.540574], [117.310194, 28.541563], [117.285459, 28.57584], [117.271167, 28.60367], [117.242615, 28.621173], [117.231389, 28.658563], [117.244855, 28.659987], [117.218388, 28.672241], [117.231373, 28.689046], [117.226231, 28.705234], [117.250183, 28.701227], [117.251222, 28.722641], [117.273551, 28.739069], [117.310359, 28.763238], [117.3247, 28.77649], [117.378583, 28.775867], [117.39088, 28.78768]];
+
+var map, imageLayer, vectorLayer;
+var layers = {urban:[], gas:[], plan:[]};
+var maskOverlay = null;
+var countyPolygon = null;
+var countyLabel = null;
+
+// 初始化地图
+function initMap(){
+  map = new T.Map('map');
+  map.centerAndZoom(new T.LngLat(117.42, 28.42), 11);
+
+  // 创建县域高亮效果（参考001截图风格）
+  createCountyHighlight(COUNTY_BOUNDARY);
+
+  // 绘制标注点
+  plotUrban();
+  plotGas();
+  plotPlan();
+
+  // 添加乡镇名称标注
+  addTownshipLabels();
+
+  // 隐藏加载提示
+  setTimeout(function(){
+    document.getElementById('loading-overlay').classList.add('hide');
+  }, 1500);
+}
+
+// 切换地图样式
+function changeMapStyle(style){
+  if(imageLayer) map.removeLayer(imageLayer);
+  if(vectorLayer) map.removeLayer(vectorLayer);
+
+  if(style === 'satellite'){
+    var imageURL = "http://t{s}.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&l={z}&tk=36c2c7b1a00180d86e97fa8ca2cd3bf2";
+    imageLayer = new T.TileLayer(imageURL, {minZoom:1, maxZoom:18, subdomains:['0','1','2','3','4','5','6','7']});
+    map.addLayer(imageLayer);
+
+    var annoURL = "http://t{s}.tianditu.gov.cn/DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=36c2c7b1a00180d86e97fa8ca2cd3bf2";
+    vectorLayer = new T.TileLayer(annoURL, {minZoom:1, maxZoom:18, subdomains:['0','1','2','3','4','5','6','7']});
+    map.addLayer(vectorLayer);
+  }
+}
+
+// 创建县域高亮效果 - 参考001截图风格
+// 县域内：浅白色/淡黄色高亮（干净明亮）
+// 县域外：浅灰色半透明遮罩（柔和不刺眼）
+// 边界线：红色/橙色醒目描边
+function createCountyHighlight(countyBounds){
+  console.log('创建县域高亮效果，边界点数:', countyBounds.length);
+
+  // 1. 外部遮罩 - 浅灰色半透明（模拟001截图中周围区域的灰色调）
+  // 用一个巨大矩形遮盖所有区域，然后县域内部用另一个多边形覆盖
+  var outerBounds = [
+    [115.5, 27.0], [119.0, 27.0], [119.0, 30.0], [115.5, 30.0], [115.5, 27.0]
+  ];
+
+  var maskPoints = outerBounds.map(function(p){ return new T.LngLat(p[0], p[1]); });
+  maskOverlay = new T.Polygon(maskPoints, {
+    color: 'transparent',
+    weight: 0,
+    opacity: 0,
+    fillColor: '#8a8a8a',
+    fillOpacity: 0.35
+  });
+  map.addOverLay(maskOverlay);
+
+  // 2. 县域范围多边形 - 浅淡高亮 + 红色粗边框（强调县域边界）
+  var countyPoints = countyBounds.map(function(p){ return new T.LngLat(p[0], p[1]); });
+  countyPolygon = new T.Polygon(countyPoints, {
+    color: '#cc3333',
+    weight: 3,
+    opacity: 0.9,
+    fillColor: '#fffff0',
+    fillOpacity: 0.45
+  });
+  map.addOverLay(countyPolygon);
+
+  // 3. 添加县名标注
+  var centerLng = 117.42;
+  var centerLat = 28.38;
+  countyLabel = new T.Label({
+    text: '弋阳县',
+    position: new T.LngLat(centerLng, centerLat),
+    offset: new T.Point(-30, -12)
+  });
+  countyLabel.setFontSize(18);
+  countyLabel.setFontColor('#1a3a5c');
+  countyLabel.setBorderColor('transparent');
+  countyLabel.setBackgroundColor('rgba(255,255,255,0.7)');
+  map.addOverLay(countyLabel);
+
+  // 4. 自适应视图到县域边界（稍微外扩一些）
+  map.setViewport(countyPoints);
+
+  console.log('✓ 县域高亮效果创建完成');
+}
+
+// 添加乡镇名称标注
+function addTownshipLabels(){
+  var townships = [
+    {name:'弋江镇', lng:117.434, lat:28.402},
+    {name:'南岩镇', lng:117.455, lat:28.370},
+    {name:'桃源街道', lng:117.458, lat:28.420},
+    {name:'花亭乡', lng:117.395, lat:28.447},
+    {name:'圭峰镇', lng:117.405, lat:28.310},
+    {name:'叠山镇', lng:117.335, lat:28.360},
+    {name:'漆工镇', lng:117.350, lat:28.460},
+    {name:'湾里乡', lng:117.503, lat:28.490},
+    {name:'葛溪乡', lng:117.540, lat:28.560},
+    {name:'中畈乡', lng:117.490, lat:28.215},
+    {name:'港口镇', lng:117.310, lat:28.290},
+    {name:'清湖乡', lng:117.538, lat:28.430},
+    {name:'旭光乡', lng:117.310, lat:28.530},
+    {name:'樟树墩镇', lng:117.290, lat:28.615},
+    {name:'曹溪镇', lng:117.460, lat:28.155},
+    {name:'三县岭镇', lng:117.555, lat:28.660}
+  ];
+
+  townships.forEach(function(t){
+    var label = new T.Label({
+      text: t.name,
+      position: new T.LngLat(t.lng, t.lat),
+      offset: new T.Point(-20, -8)
+    });
+    label.setFontSize(12);
+    label.setFontColor('#4a6a84');
+    label.setBorderColor('transparent');
+    label.setBackgroundColor('rgba(255,255,255,0.6)');
+    map.addOverLay(label);
+  });
+}
+
+// 绘制现有充电站 - 绿色圆点 + 白色闪电图标
+function plotUrban(){
+  URBAN.forEach(function(d){
+    var marker = new T.Marker(new T.LngLat(d.lng, d.lat), {
+      icon: createIcon('#2ecc40', '⚡', 24)
+    });
+    marker.addEventListener('click', function(){
+      var infoWin = new T.InfoWindow();
+      infoWin.setContent(
+        '<div class="info-window">' +
+        '<div class="info-title">⚡ ' + d.name + '</div>' +
+        '<div class="info-row">📍 地址：<b>' + d.addr + '</b></div>' +
+        '<div class="info-row">📐 坐标：' + d.lng.toFixed(6) + ', ' + d.lat.toFixed(6) + '</div>' +
+        '<div class="info-row"><span class="badge badge-green">✅ 已建成运营</span></div>' +
+        '</div>'
+      );
+      infoWin.setLngLat(new T.LngLat(d.lng, d.lat));
+      map.openInfoWindow(infoWin);
+    });
+    map.addOverLay(marker);
+    layers.urban.push(marker);
+  });
+}
+
+// 绘制加油站 - 橙色圆点
+function plotGas(){
+  GAS.forEach(function(d){
+    var lng = 117.44 + (Math.random() - 0.5) * 0.2;
+    var lat = 28.37 + (Math.random() - 0.5) * 0.2;
+
+    var marker = new T.Marker(new T.LngLat(lng, lat), {
+      icon: createIcon('#e67e22', '⛽', 22)
+    });
+    marker.addEventListener('click', function(){
+      var infoWin = new T.InfoWindow();
+      infoWin.setContent(
+        '<div class="info-window">' +
+        '<div class="info-title">⛽ ' + d.name + '</div>' +
+        '<div class="info-row">📍 地址：<b>' + d.addr + '</b></div>' +
+        '<div class="info-row">📊 年销量：<b>' + d.sales.toLocaleString() + ' 吨</b></div>' +
+        '<div class="info-row">💰 油品收入：<b>' + d.revenue.toLocaleString() + ' 万元</b></div>' +
+        '<div class="info-row"><span class="badge ' + (d.has_ev ? 'badge-green' : 'badge-orange') + '">' +
+        (d.has_ev ? '✅ 已有充电设施' : '⚠️ 待改造升级') + '</span></div>' +
+        '</div>'
+      );
+      infoWin.setLngLat(new T.LngLat(lng, lat));
+      map.openInfoWindow(infoWin);
+    });
+    map.addOverLay(marker);
+    layers.gas.push(marker);
+  });
+}
+
+// 绘制规划充电站 - 蓝色圆点
+function plotPlan(){
+  PLAN.forEach(function(d){
+    var lng = 117.44 + (Math.random() - 0.5) * 0.2;
+    var lat = 28.37 + (Math.random() - 0.5) * 0.2;
+
+    var marker = new T.Marker(new T.LngLat(lng, lat), {
+      icon: createIcon('#3498db', '🔋', 22)
+    });
+    marker.addEventListener('click', function(){
+      var infoWin = new T.InfoWindow();
+      infoWin.setContent(
+        '<div class="info-window">' +
+        '<div class="info-title">🔋 ' + d.name + '</div>' +
+        '<div class="info-row">🏘️ 乡镇：<b>' + d.township + '</b>　📋 场景：<b>' + d.scene + '</b></div>' +
+        '<div class="info-row">🔌 桩数：<b>' + d.qty + ' 台</b>　⚡ 功率：<b>' + d.power + ' kW</b></div>' +
+        '<div class="info-row">🔧 设备：<b>' + d.equip + '</b></div>' +
+        '<div class="info-row"><span class="badge badge-blue">📅 ' + d.year + ' 年建设</span></div>' +
+        '</div>'
+      );
+      infoWin.setLngLat(new T.LngLat(lng, lat));
+      map.openInfoWindow(infoWin);
+    });
+    map.addOverLay(marker);
+    layers.plan.push(marker);
+  });
+}
+
+// 创建自定义圆形图标（更精美的效果）
+function createIcon(color, text, size){
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + (size+8) + '" height="' + (size+12) + '" viewBox="0 0 ' + (size+8) + ' ' + (size+12) + '">' +
+    '<defs>' +
+      '<filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">' +
+        '<feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-opacity="0.3"/>' +
+      '</filter>' +
+    '</defs>' +
+    '<ellipse cx="' + ((size+8)/2) + '" cy="' + (size+8) + '" rx="' + (size*0.25) + '" ry="' + (size*0.1) + '" fill="rgba(0,0,0,0.15)"/>' +
+    '<circle cx="' + ((size+8)/2) + '" cy="' + ((size+4)/2) + '" r="' + (size/2+1) + '" fill="' + color + '" stroke="white" stroke-width="2.5" filter="url(#shadow)"/>' +
+    '<text x="50%" y="' + ((size+4)/2) + '" text-anchor="middle" dy=".35em" font-size="' + Math.floor(size*0.55) + '" fill="white">' + text + '</text>' +
+    '</svg>';
+  var icon = new T.Icon({
+    iconUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
+    iconSize: new T.Point(size+8, size+12),
+    iconAnchor: new T.Point((size+8)/2, (size+8)/2)
+  });
+  return icon;
+}
+
+// 切换图层显示
+function toggleLayer(name, show){
+  layers[name].forEach(function(marker){
+    if(show){
+      map.addOverLay(marker);
+    } else {
+      map.removeOverLay(marker);
+    }
+  });
+}
+
+// 切换边界显示
+function toggleBoundary(show){
+  if(maskOverlay && countyPolygon){
+    if(show){
+      map.addOverLay(maskOverlay);
+      map.addOverLay(countyPolygon);
+      if(countyLabel) map.addOverLay(countyLabel);
+    } else {
+      map.removeOverLay(maskOverlay);
+      map.removeOverLay(countyPolygon);
+      if(countyLabel) map.removeOverLay(countyLabel);
+    }
+  }
+}
+
+// 设置显示模式
+function setMode(mode){
+  document.querySelectorAll('.mode-btn').forEach(function(btn){
+    btn.classList.remove('active');
+  });
+  event.target.closest('.mode-btn').classList.add('active');
+
+  var checkboxes = document.querySelectorAll('.toggle input[type="checkbox"]');
+
+  switch(mode){
+    case 'all':
+      toggleLayer('urban', true);
+      toggleLayer('gas', true);
+      toggleLayer('plan', true);
+      toggleBoundary(true);
+      checkboxes[0].checked = true;
+      checkboxes[1].checked = true;
+      checkboxes[2].checked = true;
+      checkboxes[3].checked = true;
+      break;
+    case 'boundary':
+      toggleLayer('urban', false);
+      toggleLayer('gas', false);
+      toggleLayer('plan', false);
+      toggleBoundary(true);
+      checkboxes[0].checked = false;
+      checkboxes[1].checked = false;
+      checkboxes[2].checked = false;
+      checkboxes[3].checked = true;
+      break;
+    case 'current':
+      toggleLayer('urban', true);
+      toggleLayer('gas', false);
+      toggleLayer('plan', false);
+      toggleBoundary(true);
+      checkboxes[0].checked = true;
+      checkboxes[1].checked = false;
+      checkboxes[2].checked = false;
+      checkboxes[3].checked = true;
+      break;
+    case 'planning':
+      toggleLayer('urban', false);
+      toggleLayer('gas', false);
+      toggleLayer('plan', true);
+      toggleBoundary(true);
+      checkboxes[0].checked = false;
+      checkboxes[1].checked = false;
+      checkboxes[2].checked = true;
+      checkboxes[3].checked = true;
+      break;
+  }
+}
+
+// 页面加载完成后初始化地图
+window.onload = initMap;
+</script>
+</body>
+</html>

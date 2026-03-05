@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>弋阳县充换电设施规划地图</title>
+  <meta name="description" content="弋阳县充换电设施规划动态地图系统，数据实时读取自SQLite数据库">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      font-family: 'Microsoft YaHei', Arial, sans-serif;
+      background: #f0f2f5;
+      overflow: hidden
+    }
+
+    /* 头部 - 浅色主题 */
+    #header {
+      height: 52px;
+      background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
+      color: #1a3a5c;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid #3388cc;
+      position: relative;
+      z-index: 200;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    #header h1 {
+      font-size: 17px;
+      letter-spacing: 1px;
+      font-weight: 700;
+      color: #1a3a5c
+    }
+
+    #header .sub {
+      font-size: 11px;
+      color: #5a8bb5;
+      margin-top: 1px
+    }
+
+    #header .stats {
+      font-size: 11px;
+      color: #5a8bb5;
+      text-align: right
+    }
+
+    #header .stats b {
+      color: #1a3a5c
+    }
+
+    #map {
+      width: 100%;
+      height: calc(100vh - 52px);
+      position: relative;
+      z-index: 1
+    }
+
+    /* 加载提示 */
+    #loading-overlay {
+      position: fixed;
+      top: 52px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 500;
+      background: rgba(255, 255, 255, 0.88);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.8s ease;
+    }
+
+    #loading-overlay.hide {
+      opacity: 0;
+      pointer-events: none
+    }
+
+    #loading-box {
+      background: rgba(40, 40, 40, 0.85);
+      color: #fff;
+      padding: 16px 40px;
+      border-radius: 10px;
+      font-size: 14px;
+      letter-spacing: 2px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    /* 控制面板 - 浅色磨砂 */
+    .ctrl {
+      position: fixed !important;
+      left: 12px;
+      z-index: 9999 !important;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(8px);
+      border: 1px solid #d0d7de;
+      border-radius: 10px;
+      padding: 12px;
+      width: 210px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      pointer-events: auto !important;
+    }
+
+    .ctrl-title {
+      font-size: 11px;
+      color: #5a7a96;
+      margin-bottom: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #e8ecf0;
+      padding-bottom: 6px;
+    }
+
+    .mode-btn {
+      width: 100%;
+      padding: 8px 10px;
+      margin: 3px 0;
+      border: 1px solid #d8dfe6;
+      border-radius: 7px;
+      background: #fff;
+      color: #2c3e50;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all .2s;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .mode-btn:hover {
+      background: #f0f6fc;
+      border-color: #3388cc
+    }
+
+    .mode-btn.active {
+      background: #e1f0ff;
+      border-color: #3388cc;
+      color: #0969da;
+      font-weight: 600
+    }
+
+    .layer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid #eef1f4
+    }
+
+    .layer-row:last-child {
+      border-bottom: none
+    }
+
+    .layer-info {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      color: #2c3e50
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 1px solid rgba(0, 0, 0, 0.1)
+    }
+
+    /* 切换开关 */
+    .toggle {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      flex-shrink: 0
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0
+    }
+
+    .slider {
+      position: absolute;
+      inset: 0;
+      background: #c8d0d8;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: .2s
+    }
+
+    .slider:before {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      background: #fff;
+      border-radius: 50%;
+      bottom: 3px;
+      left: 3px;
+      transition: .2s;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2)
+    }
+
+    input:checked+.slider {
+      background: var(--c, #3fb950)
+    }
+
+    input:checked+.slider:before {
+      transform: translateX(16px)
+    }
+
+    /* 信息弹窗 */
+    .info-window {
+      background: #fff;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      padding: 12px;
+      min-width: 200px;
+      max-width: 280px;
+      font-size: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12)
+    }
+
+    .info-title {
+      font-size: 14px;
+      font-weight: bold;
+      color: #1a3a5c;
+      border-bottom: 2px solid #e1ecf4;
+      padding-bottom: 7px;
+      margin-bottom: 7px
+    }
+
+    .info-row {
+      color: #4a6a84;
+      margin: 4px 0;
+      line-height: 1.6
+    }
+
+    .info-row b {
+      color: #1a3a5c
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      margin-top: 2px
+    }
+
+    .badge-green {
+      background: #dafbe1;
+      color: #1a7f37;
+      border: 1px solid #4ac26b
+    }
+
+    .badge-blue {
+      background: #ddf4ff;
+      color: #0969da;
+      border: 1px solid #54aeff
+    }
+
+    .badge-orange {
+      background: #fff8c5;
+      color: #9a6700;
+      border: 1px solid #d4a72c
+    }
+
+    /* 右下角统计面板 */
+    #stats-panel {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      z-index: 9999;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      border: 1px solid #d0d7de;
+      border-radius: 10px;
+      padding: 14px 18px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      font-size: 12px;
+      color: #2c3e50;
+      line-height: 1.8;
+    }
+
+    .stats-title {
+      font-weight: 700;
+      font-size: 13px;
+      color: #1a3a5c;
+      margin-bottom: 6px;
+      border-bottom: 1px solid #e8ecf0;
+      padding-bottom: 4px
+    }
+
+    .stats-row {
+      display: flex;
+      align-items: center;
+      gap: 6px
+    }
+
+    .stats-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0
+    }
+
+    .stats-val {
+      font-weight: 700;
+      color: #1a3a5c
+    }
+
+    /* 左下角图例 */
+    /* 左下角图例 */
+    #legend {
+      position: fixed;
+      bottom: 60px;
+      /* 上移以为天地图原生比例尺留出空间 */
+      left: 16px;
+      z-index: 9999;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      border: 1px solid #d0d7de;
+      border-radius: 10px;
+      padding: 10px 14px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      font-size: 11px;
+      color: #2c3e50;
+    }
+
+    .legend-title {
+      font-weight: 700;
+      font-size: 12px;
+      margin-bottom: 6px;
+      color: #1a3a5c
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 3px 0
+    }
+
+    .legend-icon {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2)
+    }
+
+    /* 数据来源标识 */
+    #data-source {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 4px 12px;
+      font-size: 10px;
+      color: #8b949e;
+    }
+
+    #data-source .live {
+      color: #2ecc40;
+      font-weight: 700
+    }
+
+    /* 强制天地图标注透明底、描边字 */
+    #map .tdt-label {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      font-weight: bold;
+      text-shadow:
+        -1px -1px 0 #fff,
+        1px -1px 0 #fff,
+        -1px 1px 0 #fff,
+        1px 1px 0 #fff,
+        0px 2px 4px rgba(0, 0, 0, 0.4);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="header">
+    <div>
+      <h1>🗺️ 弋阳县充换电设施规划地图</h1>
+      <p class="sub">天地图 · 动态数据 · Flask API</p>
+    </div>
+    <div class="stats" id="headerStats">
+      <span class="spinner"
+        style="display:inline-block;width:12px;height:12px;border-width:2px;vertical-align:middle"></span>
+      数据加载中...
+    </div>
+  </div>
+
+  <!-- 加载提示 -->
+  <div id="loading-overlay">
+    <div id="loading-box">
+      <div class="spinner"></div>
+      正在加载地图数据...
+    </div>
+  </div>
+
+  <div id="map"></div>
+
+  <!-- 地图样式 -->
+  <div class="ctrl" style="top:64px" id="panelStyle">
+    <div class="ctrl-title">🗺️ 地图样式</div>
+    <select id="mapStyle" onchange="changeMapStyle(this.value)"
+      style="width:100%;padding:7px;border:1px solid #d0d7de;border-radius:6px;font-size:12px;background:#fff;color:#2c3e50">
+      <option value="standard">标准地图</option>
+      <option value="satellite">卫星影像</option>
+    </select>
+  </div>
+
+  <!-- 显示模式 -->
+  <div class="ctrl" style="top:148px" id="panelMode">
+    <div class="ctrl-title">📋 显示模式</div>
+    <div id="modeButtons">加载中...</div>
+  </div>
+
+  <!-- 图层控制 -->
+  <div class="ctrl" style="top:376px" id="panelLayers">
+    <div class="ctrl-title">📂 图层控制</div>
+    <div id="layerToggles">加载中...</div>
+  </div>
+
+  <!-- 右下角统计 -->
+  <div id="stats-panel">
+    <div class="stats-title">📊 弋阳县充电设施概况</div>
+    <div id="statsContent">加载中...</div>
+  </div>
+
+  <!-- 左下角图例 -->
+  <div id="legend">
+    <div class="legend-title">📌 图例</div>
+    <div id="legendContent">加载中...</div>
+  </div>
+
+  <!-- 数据源指示 -->
+  <div id="data-source">
+    数据来源：<span class="live">● LIVE</span> SQLite 数据库 · Flask API
+  </div>
+
+  <script>
+    // ===== 全局变量 =====
+    var CFG = null;
+    var map, imageLayer, vectorLayer;
+    var layers = { urban: [], gas: [], plan: [], radius_existing: [], radius_planned: [] };
+    var maskOverlay = null, countyPolygon = null, countyLabel = null;
+    var townshipLabels = [];
+    var townshipPolygons = [];
+    var BOUNDARY = [];
+    var TOWNSHIP_DATA = null;
+
+    // ===== 启动函数 =====
+    async function boot() {
+      try {
+        // 1. 加载配置（含天地图Key、样式、显示模式、乡镇标注）
+        CFG = await fetchJSON('/api/config');
+        console.log('✓ 配置加载完成', CFG);
+
+        // 2. 动态注入天地图脚本
+        await loadScript('http://api.tianditu.gov.cn/api?v=4.0&tk=' + CFG.tianditu_key);
+        console.log('✓ 天地图API加载完成');
+
+        // 3. 并行加载所有业务数据（含乡镇边界）
+        var [boundary, townshipBounds, urban, gas, planned, stats] = await Promise.all([
+          fetchJSON('/api/boundary'),
+          fetchJSON('/api/boundary/townships'),
+          fetchJSON('/api/stations/urban'),
+          fetchJSON('/api/stations/gas'),
+          fetchJSON('/api/stations/planned'),
+          fetchJSON('/api/stats')
+        ]);
+        console.log('✓ 所有数据加载完成');
+        console.log('  县域边界:', boundary.count, '个点 (来源:', boundary.source, ')');
+        console.log('  乡镇边界:', townshipBounds.count, '个乡镇 (来源:', townshipBounds.source, ')');
+
+        BOUNDARY = boundary.boundary || [];
+        TOWNSHIP_DATA = townshipBounds;
+
+        // 4. 更新头部统计
+        document.getElementById('headerStats').innerHTML =
+          '现有充电站 <b>' + urban.count + '</b> · 加油站 <b>' + gas.count +
+          '</b> · 规划新增 <b>' + planned.count + '</b><br>' +
+          '<span style="color:#2ecc40">● LIVE</span> 数据库实时读取 · 边界: ' + boundary.source;
+
+        // 5. 更新右下角统计面板
+        updateStatsPanel(stats, urban.count, gas.count, planned.count);
+
+        // 6. 构建控制面板（从配置动态生成）
+        buildModeButtons(CFG.modes);
+        buildLayerToggles(CFG.styles);
+        buildLegend(CFG.styles);
+
+        // 7. 初始化地图
+        initMap();
+
+        // 8. 绑定数据
+        plotUrban(urban.stations);
+        plotGas(gas.stations);
+        plotPlan(planned.stations);
+
+        // 9. 绘制乡镇边界 + 标注（从Shapefile API获取）
+        if (TOWNSHIP_DATA && TOWNSHIP_DATA.geojson) {
+          drawTownshipBoundaries(TOWNSHIP_DATA.geojson);
+          // 使用Shapefile计算的中心点作为标注位置
+          addTownshipLabels(TOWNSHIP_DATA.townships);
+        } else if (CFG.township_labels) {
+          // 回退：使用配置中的坐标
+          addTownshipLabels(CFG.township_labels);
+        }
+
+        // 10. 隐藏加载提示
+        setTimeout(function () {
+          document.getElementById('loading-overlay').classList.add('hide');
+        }, 800);
+
+        console.log('✓ 应用启动完成');
+
+      } catch (err) {
+        console.error('✗ 启动失败:', err);
+        document.getElementById('loading-box').innerHTML =
+          '❌ 加载失败：' + err.message + '<br><small>请确认 Flask 服务已启动 (python app.py)</small>';
+        document.getElementById('loading-box').style.background = 'rgba(180,40,40,0.9)';
+      }
+    }
+
+    function fetchJSON(url) {
+      return fetch(url).then(function (r) {
+        if (!r.ok) throw new Error('API请求失败: ' + url + ' (' + r.status + ')');
+        return r.json();
+      });
+    }
+
+    function loadScript(src) {
+      return new Promise(function (resolve, reject) {
+        var s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = function () { reject(new Error('脚本加载失败: ' + src)); };
+        document.head.appendChild(s);
+      });
+    }
+
+    // ===== 地图初始化 =====
+    function initMap() {
+      map = new T.Map('map');
+      map.centerAndZoom(new T.LngLat(CFG.center[0], CFG.center[1]), 11);
+
+      // 增加比例尺控件
+      var scale = new T.Control.Scale();
+      map.addControl(scale);
+
+      if (BOUNDARY.length > 0) {
+        createCountyHighlight(BOUNDARY);
+      }
+    }
+
+    // 创建县域高亮效果（参考001截图风格 - 从配置读取样式）
+    function createCountyHighlight(bounds) {
+      var maskStyle = CFG.styles.spotlight_mask;
+      var boundaryStyle = CFG.styles.county_boundary;
+
+      // 1. 外部遮罩 - 柔和灰色
+      var outer = [[115.5, 27.0], [119.0, 27.0], [119.0, 30.0], [115.5, 30.0], [115.5, 27.0]];
+      var maskPts = outer.map(function (p) { return new T.LngLat(p[0], p[1]); });
+      maskOverlay = new T.Polygon(maskPts, {
+        color: 'transparent', weight: 0, opacity: 0,
+        fillColor: maskStyle.fill_color,
+        fillOpacity: maskStyle.fill_opacity
+      });
+      map.addOverLay(maskOverlay);
+
+      // 2. 县域多边形 - 浅色高亮 + 红色边框
+      var cPts = bounds.map(function (p) { return new T.LngLat(p[0], p[1]); });
+      countyPolygon = new T.Polygon(cPts, {
+        color: boundaryStyle.stroke_color,
+        weight: boundaryStyle.stroke_width,
+        opacity: 0.9,
+        fillColor: boundaryStyle.fill_color,
+        fillOpacity: boundaryStyle.fill_opacity
+      });
+      map.addOverLay(countyPolygon);
+
+      // 3. 县名标注
+      countyLabel = new T.Label({
+        text: CFG.county_name,
+        position: new T.LngLat(CFG.center[0], CFG.center[1]),
+        offset: new T.Point(-30, -12)
+      });
+      countyLabel.setFontSize(18);
+      countyLabel.setFontColor('#1a3a5c');
+      countyLabel.setBorderColor('transparent');
+      countyLabel.setBackgroundColor('rgba(255,255,255,0.7)');
+      map.addOverLay(countyLabel);
+
+      // 4. 自适应视图
+      map.setViewport(cPts);
+    }
+
+    // 绘制乡镇边界多边形（从GeoJSON）
+    function drawTownshipBoundaries(geojson) {
+      var features = geojson.features || [];
+      var colors = ['#e67e22', '#3498db', '#2ecc71', '#9b59b6', '#e74c3c', '#1abc9c', '#f39c12', '#2980b9'];
+      features.forEach(function (feat, idx) {
+        var geom = feat.geometry;
+        var props = feat.properties || {};
+        var name = props.DistName || props.NAME || props.name || '';
+        var rings = [];
+        if (geom.type === 'MultiPolygon') {
+          geom.coordinates.forEach(function (poly) { rings.push(poly[0]); });
+        } else if (geom.type === 'Polygon') {
+          rings.push(geom.coordinates[0]);
+        }
+        rings.forEach(function (ring) {
+          var pts = ring.map(function (p) { return new T.LngLat(p[0], p[1]); });
+          var color = colors[idx % colors.length];
+          var polygon = new T.Polygon(pts, {
+            color: '#e67e22',
+            weight: 1.5,
+            opacity: 0.6,
+            fillColor: 'transparent',
+            fillOpacity: 0,
+            dashArray: [6, 4]
+          });
+          // 点击乡镇边界显示名称
+          polygon.addEventListener('click', function () {
+            var center = pts[Math.floor(pts.length / 2)];
+            openInfo(center.lng, center.lat,
+              '<div class="info-window"><div class="info-title">🏘️ ' + name + '</div>' +
+              '<div class="info-row">行政类型：<b>乡镇/街道</b></div>' +
+              '<div class="info-row"><span class="badge badge-orange">边界来自Shapefile</span></div></div>'
+            );
+          });
+          map.addOverLay(polygon);
+          townshipPolygons.push(polygon);
+        });
+      });
+      console.log('✓ 绘制乡镇边界:', townshipPolygons.length, '个多边形');
+    }
+
+    // 乡镇名称标注
+    function addTownshipLabels(townships) {
+      var labelStyle = CFG.styles.label;
+      townships.forEach(function (t) {
+        if (!t.name || !t.lng) return;
+        var label = new T.Label({
+          text: t.name,
+          position: new T.LngLat(t.lng, t.lat),
+          offset: new T.Point(-20, -8)
+        });
+        label.setFontSize(labelStyle.fontsize);
+        label.setFontColor(labelStyle.color);
+        label.setBorderColor(labelStyle.border);
+        label.setBackgroundColor(labelStyle.background);
+        map.addOverLay(label);
+        townshipLabels.push(label);
+      });
+    }
+
+    // ===== 绘制标注点 =====
+    function plotUrban(data) {
+      var s = CFG.styles.station_existing;
+      var sr = CFG.styles.radius_existing;
+      data.forEach(function (d) {
+        // 5公里服务范围 (半径5公里)
+        var circle = new T.Circle(new T.LngLat(d.lng, d.lat), 5000, {
+          color: sr.color, weight: sr.weight, opacity: sr.opacity,
+          fillColor: sr.fill_color, fillOpacity: sr.fill_opacity, lineStyle: 'solid'
+        });
+        circle.addEventListener('click', function () {
+          openInfo(d.lng, d.lat, '<div class="info-window"><div class="info-title">🗺️ 服务范围 (现有)</div><div class="info-row">所属站点：<b>' + d.name + '</b></div><div class="info-row">覆盖半径：<b>5 公里</b></div><div class="info-row">覆盖面积：<b>约 78.5 平方公里</b></div></div>');
+        });
+        map.addOverLay(circle);
+        layers.radius_existing.push(circle);
+
+        var mk = new T.Marker(new T.LngLat(d.lng, d.lat), { icon: mkIcon(s.color, s.icon, s.size) });
+        mk.addEventListener('click', function () {
+          openInfo(d.lng, d.lat,
+            '<div class="info-window"><div class="info-title">⚡ ' + d.name + '</div>' +
+            '<div class="info-row">📍 地址：<b>' + d.addr + '</b></div>' +
+            '<div class="info-row">📐 坐标：' + d.lng.toFixed(6) + ', ' + d.lat.toFixed(6) + '</div>' +
+            '<div class="info-row"><span class="badge badge-green">✅ 已建成运营</span></div></div>'
+          );
+        });
+        map.addOverLay(mk);
+        layers.urban.push(mk);
+      });
+    }
+
+    function plotGas(data) {
+      var s = CFG.styles.gas_station;
+      data.forEach(function (d) {
+        var lng = d.lng ? d.lng : CFG.center[0] + (Math.random() - 0.5) * 0.2;
+        var lat = d.lat ? d.lat : CFG.center[1] + (Math.random() - 0.5) * 0.2;
+        var mk = new T.Marker(new T.LngLat(lng, lat), { icon: mkIcon(s.color, s.icon, s.size) });
+        mk.addEventListener('click', function () {
+          openInfo(lng, lat,
+            '<div class="info-window"><div class="info-title">⛽ ' + d.name + '</div>' +
+            '<div class="info-row">📍 地址：<b>' + d.addr + '</b></div>' +
+            '<div class="info-row">📊 年销量：<b>' + (d.sales || 0).toLocaleString() + ' 吨</b></div>' +
+            '<div class="info-row">💰 油品收入：<b>' + (d.revenue || 0).toLocaleString() + ' 万元</b></div>' +
+            '<div class="info-row"><span class="badge ' + (d.has_ev ? 'badge-green' : 'badge-orange') + '">' +
+            (d.has_ev ? '✅ 已有充电设施' : '⚠️ 待改造升级') + '</span></div></div>'
+          );
+        });
+        map.addOverLay(mk);
+        layers.gas.push(mk);
+      });
+    }
+
+    function plotPlan(data) {
+      var s = CFG.styles.station_planned;
+      var sr = CFG.styles.radius_planned;
+      data.forEach(function (d) {
+        var lng = d.lng ? d.lng : CFG.center[0] + (Math.random() - 0.5) * 0.2;
+        var lat = d.lat ? d.lat : CFG.center[1] + (Math.random() - 0.5) * 0.2;
+
+        // 5公里服务范围(规划), 半径5公里
+        var circle = new T.Circle(new T.LngLat(lng, lat), 5000, {
+          color: sr.color, weight: sr.weight, opacity: sr.opacity,
+          fillColor: sr.fill_color, fillOpacity: sr.fill_opacity, lineStyle: 'dashed'
+        });
+        circle.addEventListener('click', function () {
+          openInfo(lng, lat, '<div class="info-window"><div class="info-title">🗺️ 服务范围 (规划)</div><div class="info-row">所属站点：<b>' + d.name + '</b></div><div class="info-row">覆盖半径：<b>5 公里</b></div><div class="info-row">覆盖面积：<b>约 78.5 平方公里</b></div></div>');
+        });
+        map.addOverLay(circle);
+        layers.radius_planned.push(circle);
+
+        var mk = new T.Marker(new T.LngLat(lng, lat), { icon: mkIcon(s.color, s.icon, s.size) });
+        mk.addEventListener('click', function () {
+          openInfo(lng, lat,
+            '<div class="info-window"><div class="info-title">🔋 ' + d.name + '</div>' +
+            '<div class="info-row">🏘️ 乡镇：<b>' + d.township + '</b>　📋 场景：<b>' + d.scene + '</b></div>' +
+            '<div class="info-row">🔌 桩数：<b>' + d.qty + ' 台</b>　⚡ 功率：<b>' + d.power + ' kW</b></div>' +
+            '<div class="info-row">🔧 设备：<b>' + d.equip + '</b></div>' +
+            '<div class="info-row"><span class="badge badge-blue">📅 ' + d.year + ' 年建设</span></div></div>'
+          );
+        });
+        map.addOverLay(mk);
+        layers.plan.push(mk);
+      });
+    }
+
+    function openInfo(lng, lat, html) {
+      var iw = new T.InfoWindow();
+      iw.setContent(html);
+      iw.setLngLat(new T.LngLat(lng, lat));
+      map.openInfoWindow(iw);
+    }
+
+    // 创建精美圆形图标（带阴影）
+    function mkIcon(color, text, size) {
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + (size + 8) + '" height="' + (size + 12) + '" viewBox="0 0 ' + (size + 8) + ' ' + (size + 12) + '">' +
+        '<defs><filter id="s" x="-20%" y="-20%" width="140%" height="140%">' +
+        '<feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-opacity="0.3"/></filter></defs>' +
+        '<ellipse cx="' + ((size + 8) / 2) + '" cy="' + (size + 8) + '" rx="' + (size * 0.25) + '" ry="' + (size * 0.1) + '" fill="rgba(0,0,0,0.15)"/>' +
+        '<circle cx="' + ((size + 8) / 2) + '" cy="' + ((size + 4) / 2) + '" r="' + (size / 2 + 1) + '" fill="' + color + '" stroke="white" stroke-width="2.5" filter="url(#s)"/>' +
+        '<text x="50%" y="' + ((size + 4) / 2) + '" text-anchor="middle" dy=".35em" font-size="' + Math.floor(size * 0.55) + '" fill="white">' + text + '</text></svg>';
+      return new T.Icon({
+        iconUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
+        iconSize: new T.Point(size + 8, size + 12),
+        iconAnchor: new T.Point((size + 8) / 2, (size + 8) / 2)
+      });
+    }
+
+    // ===== 控制功能 =====
+    function changeMapStyle(style) {
+      if (imageLayer) map.removeLayer(imageLayer);
+      if (vectorLayer) map.removeLayer(vectorLayer);
+      imageLayer = null; vectorLayer = null;
+      if (style === 'satellite') {
+        var tk = CFG.tianditu_key;
+        imageLayer = new T.TileLayer('http://t{s}.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&l={z}&tk=' + tk,
+          { minZoom: 1, maxZoom: 18, subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'] });
+        map.addLayer(imageLayer);
+        vectorLayer = new T.TileLayer('http://t{s}.tianditu.gov.cn/DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=' + tk,
+          { minZoom: 1, maxZoom: 18, subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'] });
+        map.addLayer(vectorLayer);
+      }
+    }
+
+    function toggleLayer(name, show) {
+      if (!layers[name]) return;
+      layers[name].forEach(function (mk) {
+        if (show) map.addOverLay(mk); else map.removeOverLay(mk);
+      });
+
+      // ===== 联动逻辑 =====
+      // 1. 关闭充电站时，同步关闭其服务半径
+      if (name === 'urban' && !show) {
+        var cbCircle = document.getElementById('cb_radius_existing');
+        if (cbCircle && cbCircle.checked) {
+          cbCircle.checked = false;
+          toggleLayer('radius_existing', false);
+        }
+      }
+      if (name === 'plan' && !show) {
+        var cbCirclePlan = document.getElementById('cb_radius_planned');
+        if (cbCirclePlan && cbCirclePlan.checked) {
+          cbCirclePlan.checked = false;
+          toggleLayer('radius_planned', false);
+        }
+      }
+
+      // 2. 开启服务半径时，如果充电站被关闭，则自动开启充电站
+      if (name === 'radius_existing' && show) {
+        var cbUrban = document.getElementById('cb_urban');
+        if (cbUrban && !cbUrban.checked) {
+          cbUrban.checked = true;
+          toggleLayer('urban', true);
+        }
+      }
+      if (name === 'radius_planned' && show) {
+        var cbPlan = document.getElementById('cb_plan');
+        if (cbPlan && !cbPlan.checked) {
+          cbPlan.checked = true;
+          toggleLayer('plan', true);
+        }
+      }
+    }
+
+    function toggleBoundary(show) {
+      if (maskOverlay && countyPolygon) {
+        if (show) {
+          map.addOverLay(maskOverlay);
+          map.addOverLay(countyPolygon);
+          if (countyLabel) map.addOverLay(countyLabel);
+        } else {
+          map.removeOverLay(maskOverlay);
+          map.removeOverLay(countyPolygon);
+          if (countyLabel) map.removeOverLay(countyLabel);
+        }
+      }
+      // 同时切换乡镇边界和标注
+      townshipPolygons.forEach(function (p) {
+        if (show) map.addOverLay(p); else map.removeOverLay(p);
+      });
+      townshipLabels.forEach(function (l) {
+        if (show) map.addOverLay(l); else map.removeOverLay(l);
+      });
+    }
+
+    function setMode(mode) {
+      document.querySelectorAll('.mode-btn').forEach(function (b) { b.classList.remove('active'); });
+      event.target.closest('.mode-btn').classList.add('active');
+      var cfg = CFG.modes[mode];
+      if (!cfg) return;
+      var has = function (n) { return cfg.layers.indexOf(n) >= 0; };
+
+      var layerKeys = ['urban', 'gas', 'plan', 'radius_existing', 'radius_planned'];
+      layerKeys.forEach(function (l) { toggleLayer(l, has(l)); });
+      toggleBoundary(has('boundary'));
+
+      // 同步复选框
+      var items = layerKeys.concat(['boundary']);
+      items.forEach(function (l) {
+        var cb = document.getElementById('cb_' + l);
+        if (cb) cb.checked = has(l);
+      });
+    }
+
+    // ===== 动态构建 UI =====
+    function buildModeButtons(modes) {
+      var html = '';
+      var first = true;
+      for (var key in modes) {
+        var m = modes[key];
+        html += '<button class="mode-btn' + (first ? ' active' : '') + '" onclick="setMode(\'' + key + '\')">' +
+          '<span>' + m.icon + '</span>' + m.name + '</button>';
+        first = false;
+      }
+      document.getElementById('modeButtons').innerHTML = html;
+    }
+
+    function buildLayerToggles(styles) {
+      var items = [
+        { key: 'urban', label: styles.station_existing.label, color: styles.station_existing.color, fn: "toggleLayer('urban',this.checked)" },
+        { key: 'gas', label: styles.gas_station.label, color: styles.gas_station.color, fn: "toggleLayer('gas',this.checked)" },
+        { key: 'plan', label: styles.station_planned.label, color: styles.station_planned.color, fn: "toggleLayer('plan',this.checked)" },
+        { key: 'radius_existing', label: styles.radius_existing.label, color: styles.radius_existing.color, fn: "toggleLayer('radius_existing',this.checked)" },
+        { key: 'radius_planned', label: styles.radius_planned.label, color: styles.radius_planned.color, fn: "toggleLayer('radius_planned',this.checked)" },
+        { key: 'boundary', label: '县域边界', color: styles.county_boundary.stroke_color, fn: "toggleBoundary(this.checked)" }
+      ];
+      var html = '';
+      items.forEach(function (it) {
+        html += '<div class="layer-row"><div class="layer-info">' +
+          '<div class="dot" style="background:' + it.color + '"></div>' + it.label + '</div>' +
+          '<label class="toggle" style="--c:' + it.color + '">' +
+          '<input type="checkbox" id="cb_' + it.key + '" checked onchange="' + it.fn + '">' +
+          '<span class="slider"></span></label></div>';
+      });
+      document.getElementById('layerToggles').innerHTML = html;
+    }
+
+    function buildLegend(styles) {
+      var html = '';
+      html += '<div class="legend-item"><div class="legend-icon" style="background:' + styles.station_existing.color + '"></div> ' + styles.station_existing.label + '（精确坐标）</div>';
+      html += '<div class="legend-item"><div class="legend-icon" style="background:' + styles.gas_station.color + '"></div> ' + styles.gas_station.label + '（模拟位置）</div>';
+      html += '<div class="legend-item"><div class="legend-icon" style="background:' + styles.station_planned.color + '"></div> ' + styles.station_planned.label + '（模拟位置）</div>';
+      html += '<div class="legend-item"><div style="width:20px;height:3px;background:' + styles.county_boundary.stroke_color + ';flex-shrink:0;border-radius:2px"></div> 县域边界</div>';
+      html += '<div class="legend-item"><div style="width:14px;height:14px;background:rgba(255,255,240,0.6);border:1px solid #ccc;flex-shrink:0;border-radius:2px"></div> 县域范围高亮</div>';
+      document.getElementById('legendContent').innerHTML = html;
+    }
+
+    function updateStatsPanel(stats, urbanCount, gasCount, plannedCount) {
+      var html = '';
+      html += '<div class="stats-row"><div class="stats-dot" style="background:#2ecc40"></div>现有充电站：<span class="stats-val">' + urbanCount + '</span> 座';
+      if (stats.existing_stations) html += '（' + stats.existing_stations + '台）';
+      html += '</div>';
+      html += '<div class="stats-row"><div class="stats-dot" style="background:#e67e22"></div>加油站：<span class="stats-val">' + gasCount + '</span> 座</div>';
+      html += '<div class="stats-row"><div class="stats-dot" style="background:#3498db"></div>规划新增：<span class="stats-val">' + plannedCount + '</span> 站';
+      if (stats.planned_piles_total) html += '（' + stats.planned_piles_total + '台）';
+      html += '</div>';
+      if (stats.planned_power_total) {
+        html += '<div class="stats-row"><div class="stats-dot" style="background:#9b59b6"></div>规划总功率：<span class="stats-val">' + Math.round(stats.planned_power_total).toLocaleString() + '</span> kW</div>';
+      }
+      if (stats.gdp) {
+        html += '<div class="stats-row"><div class="stats-dot" style="background:#e74c3c"></div>GDP（' + stats.latest_year + '）：<span class="stats-val">' + stats.gdp + '</span> 亿元</div>';
+      }
+      document.getElementById('statsContent').innerHTML = html;
+    }
+
+    // 启动应用
+    window.onload = boot;
+  </script>
+</body>
+
+</html>

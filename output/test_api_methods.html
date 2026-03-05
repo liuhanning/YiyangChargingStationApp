@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>天地图API方法测试</title>
+<script src="http://api.tianditu.gov.cn/api?v=4.0&tk=36c2c7b1a00180d86e97fa8ca2cd3bf2"></script>
+<style>
+body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+#map { width: 100%; height: 400px; border: 1px solid #ccc; }
+#info { margin-top: 20px; padding: 10px; background: #f0f0f0; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+
+<h1>天地图API方法测试</h1>
+<div id="map"></div>
+<div id="info">正在测试...</div>
+
+<script>
+window.onload = function() {
+  var info = document.getElementById('info');
+  var output = '';
+
+  try {
+    // 创建地图
+    var map = new T.Map('map');
+    map.centerAndZoom(new T.LngLat(117.44, 28.37), 12);
+
+    output += '✓ 地图创建成功\n\n';
+
+    // 测试地图对象的所有方法
+    output += '=== 地图对象的方法 ===\n';
+    var methods = [];
+    for (var key in map) {
+      if (typeof map[key] === 'function') {
+        methods.push(key);
+      }
+    }
+
+    // 查找包含 point、pixel、container 等关键词的方法
+    output += '\n包含坐标转换相关的方法:\n';
+    var coordMethods = methods.filter(function(m) {
+      return m.toLowerCase().indexOf('point') >= 0 ||
+             m.toLowerCase().indexOf('pixel') >= 0 ||
+             m.toLowerCase().indexOf('container') >= 0 ||
+             m.toLowerCase().indexOf('lnglat') >= 0;
+    });
+
+    coordMethods.forEach(function(m) {
+      output += '  - ' + m + '\n';
+    });
+
+    // 测试常见的坐标转换方法
+    output += '\n=== 测试坐标转换方法 ===\n';
+    var testLngLat = new T.LngLat(117.44, 28.37);
+
+    var testMethods = [
+      'lngLatToPoint',
+      'lnglatToPoint',
+      'lngLatToContainerPixel',
+      'lngLatToLayerPoint',
+      'lngLatToPixel',
+      'getPixelFromLngLat',
+      'pointToLngLat'
+    ];
+
+    testMethods.forEach(function(methodName) {
+      try {
+        if (typeof map[methodName] === 'function') {
+          var result = map[methodName](testLngLat);
+          output += '✓ ' + methodName + '() 存在，返回: ' + JSON.stringify(result) + '\n';
+        } else {
+          output += '✗ ' + methodName + '() 不存在\n';
+        }
+      } catch(e) {
+        output += '✗ ' + methodName + '() 调用失败: ' + e.message + '\n';
+      }
+    });
+
+    // 显示所有方法
+    output += '\n=== 所有方法列表 ===\n';
+    methods.sort().forEach(function(m) {
+      output += '  ' + m + '\n';
+    });
+
+  } catch(e) {
+    output += '✗ 错误: ' + e.message + '\n';
+    console.error(e);
+  }
+
+  info.textContent = output;
+  console.log(output);
+};
+</script>
+
+</body>
+</html>

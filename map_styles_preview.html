@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>高德地图样式预览</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Microsoft YaHei', Arial, sans-serif; background: #0d1117; color: #e6edf3; }
+  h1 { padding: 16px 24px; font-size: 16px; background: #161b22; border-bottom: 1px solid #30363d; color: #58a6ff; }
+  #grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 16px; }
+  .card {
+    border: 2px solid #30363d; border-radius: 8px; overflow: hidden; cursor: pointer;
+    transition: border-color .2s, transform .15s;
+  }
+  .card:hover { border-color: #58a6ff; transform: scale(1.02); }
+  .card.active { border-color: #3fb950; }
+  .map-mini { width: 100%; height: 160px; }
+  .card-label {
+    background: #161b22; padding: 8px 10px; font-size: 12px; color: #8b949e;
+    border-top: 1px solid #30363d;
+  }
+  .card-label .name { color: #c9d1d9; font-weight: bold; margin-bottom: 2px; }
+  .card-label .id { font-size: 10px; color: #484f58; font-family: monospace; }
+  #apply-bar {
+    position: sticky; bottom: 0; background: #161b22; border-top: 1px solid #30363d;
+    padding: 10px 24px; display: flex; align-items: center; gap: 12px;
+  }
+  #apply-bar span { font-size: 13px; color: #8b949e; }
+  #apply-bar strong { color: #3fb950; font-size: 14px; }
+  .btn {
+    background: #238636; color: #fff; border: none; border-radius: 6px;
+    padding: 7px 18px; font-size: 13px; cursor: pointer; font-family: inherit;
+  }
+  .btn:hover { background: #2ea043; }
+</style>
+</head>
+<body>
+<h1>高德地图样式一览 — 点击预览，选中后复制样式ID</h1>
+<div id="grid"></div>
+<div id="apply-bar">
+  <span>当前选中：</span>
+  <strong id="selected-name">（点击卡片选择）</strong>
+  <span id="selected-id" style="font-family:monospace;font-size:12px;color:#484f58"></span>
+</div>
+
+<script>
+var styles = [
+  { name: "标准（白天）",   id: "amap://styles/normal",       desc: "默认标准白色底图" },
+  { name: "暗黑模式",       id: "amap://styles/dark",         desc: "深色科技风，夜间友好" },
+  { name: "月光银",         id: "amap://styles/light",        desc: "浅灰简洁，商务感强" },
+  { name: "马卡龙",         id: "amap://styles/macaron",      desc: "柔和色彩，清新可爱" },
+  { name: "远山黛",         id: "amap://styles/grey",         desc: "中性灰调，专业报告风" },
+  { name: "草色青",         id: "amap://styles/graffiti",     desc: "绿色系，生态环保感" },
+  { name: "极夜蓝",         id: "amap://styles/blue",         desc: "深蓝科技，GIS风格" },
+  { name: "涂鸦",           id: "amap://styles/fresh",        desc: "卡通风，活泼色彩" },
+  { name: "卫星图+路网",    id: "satellite",                  desc: "真实卫星影像+道路叠加", special: true },
+  { name: "路况图",         id: "traffic",                    desc: "实时交通路况", special: true },
+];
+
+var KEY = "63012397200899138fc66edc8f54a72a";
+var maps = [];
+var selected = null;
+
+function createCard(s, idx) {
+  var card = document.createElement('div');
+  card.className = 'card';
+  card.id = 'card-' + idx;
+
+  var mapDiv = document.createElement('div');
+  mapDiv.className = 'map-mini';
+  mapDiv.id = 'map-' + idx;
+
+  var label = document.createElement('div');
+  label.className = 'card-label';
+  label.innerHTML = '<div class="name">' + s.name + '</div>'
+    + '<div>' + s.desc + '</div>'
+    + '<div class="id">' + s.id + '</div>';
+
+  card.appendChild(mapDiv);
+  card.appendChild(label);
+  card.onclick = function() {
+    document.querySelectorAll('.card').forEach(function(c){ c.classList.remove('active'); });
+    card.classList.add('active');
+    document.getElementById('selected-name').textContent = s.name;
+    document.getElementById('selected-id').textContent = s.id;
+  };
+
+  document.getElementById('grid').appendChild(card);
+  return mapDiv.id;
+}
+
+function initMaps() {
+  styles.forEach(function(s, idx) {
+    var divId = createCard(s, idx);
+    setTimeout(function() {
+      try {
+        var m;
+        if (s.special && s.id === 'satellite') {
+          m = new AMap.Map(divId, {
+            zoom: 12, center: [117.44, 28.38],
+            layers: [new AMap.TileLayer.Satellite(), new AMap.TileLayer.RoadNet()]
+          });
+        } else if (s.special && s.id === 'traffic') {
+          m = new AMap.Map(divId, { zoom: 12, center: [117.44, 28.38] });
+          new AMap.TileLayer.Traffic({ zIndex: 10 }).setMap(m);
+        } else {
+          m = new AMap.Map(divId, {
+            zoom: 12, center: [117.44, 28.38],
+            mapStyle: s.id, resizeEnable: false
+          });
+        }
+        // 加一个示意标注
+        new AMap.Marker({ position: [117.44, 28.38], map: m });
+        maps.push(m);
+      } catch(e) { console.warn(s.name, e); }
+    }, idx * 200);
+  });
+}
+</script>
+<script src="https://webapi.amap.com/maps?v=2.0&key=63012397200899138fc66edc8f54a72a&plugin=AMap.TileLayer&callback=initMaps"></script>
+</body>
+</html>
