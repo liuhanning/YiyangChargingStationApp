@@ -600,10 +600,13 @@
       var maskStyle = CFG.styles.spotlight_mask;
       var boundaryStyle = CFG.styles.county_boundary;
 
-      // 1. 外部遮罩 - 柔和灰色
-      var outer = [[115.5, 27.0], [119.0, 27.0], [119.0, 30.0], [115.5, 30.0], [115.5, 27.0]];
+      // 1. 外部遮罩 - 带洞（通过两环数组实现镂空效果）
+      var outer = [[110.0, 20.0], [125.0, 20.0], [125.0, 35.0], [110.0, 35.0], [110.0, 20.0]];
       var maskPts = outer.map(function (p) { return new T.LngLat(p[0], p[1]); });
-      maskOverlay = new T.Polygon(maskPts, {
+      var innerPts = bounds.map(function (p) { return new T.LngLat(p[0], p[1]); });
+
+      // 添加判断避免错误，如果 T.Polygon 传入多数组实现镂空
+      maskOverlay = new T.Polygon([maskPts, innerPts], {
         color: 'transparent', weight: 0, opacity: 0,
         fillColor: maskStyle.fill_color,
         fillOpacity: maskStyle.fill_opacity
@@ -611,8 +614,7 @@
       map.addOverLay(maskOverlay);
 
       // 2. 县域多边形 - 浅色高亮 + 红色边框
-      var cPts = bounds.map(function (p) { return new T.LngLat(p[0], p[1]); });
-      countyPolygon = new T.Polygon(cPts, {
+      countyPolygon = new T.Polygon(innerPts, {
         color: boundaryStyle.stroke_color,
         weight: boundaryStyle.stroke_width,
         opacity: 0.9,
@@ -634,7 +636,7 @@
       map.addOverLay(countyLabel);
 
       // 4. 自适应视图
-      map.setViewport(cPts);
+      map.setViewport(innerPts);
     }
 
     // 绘制乡镇边界多边形（从GeoJSON）
@@ -880,6 +882,17 @@
       });
     }
 
+    function toggleHideOutside(hide) {
+      if (!maskOverlay) return;
+      if (hide) {
+        maskOverlay.setFillColor('#f0f2f5'); // 与背景色一致
+        maskOverlay.setFillOpacity(1.0);     // 完全不透明，遮挡外部
+      } else {
+        maskOverlay.setFillColor(CFG.styles.spotlight_mask.fill_color || '#8a8a8a');
+        maskOverlay.setFillOpacity(CFG.styles.spotlight_mask.fill_opacity || 0.35); // 恢复半透明
+      }
+    }
+
     function setMode(mode) {
       document.querySelectorAll('.mode-btn').forEach(function (b) { b.classList.remove('active'); });
       event.target.closest('.mode-btn').classList.add('active');
@@ -919,14 +932,16 @@
         { key: 'plan', label: styles.station_planned.label, color: styles.station_planned.color, fn: "toggleLayer('plan',this.checked)" },
         { key: 'radius_existing', label: styles.radius_existing.label, color: styles.radius_existing.color, fn: "toggleLayer('radius_existing',this.checked)" },
         { key: 'radius_planned', label: styles.radius_planned.label, color: styles.radius_planned.color, fn: "toggleLayer('radius_planned',this.checked)" },
-        { key: 'boundary', label: '县域边界', color: styles.county_boundary.stroke_color, fn: "toggleBoundary(this.checked)" }
+        { key: 'boundary', label: '县域边界', color: styles.county_boundary.stroke_color, fn: "toggleBoundary(this.checked)" },
+        { key: 'hide_outside', label: '隐藏县外地图', color: '#95a5a6', fn: "toggleHideOutside(this.checked)", checked: false }
       ];
       var html = '';
       items.forEach(function (it) {
+        var checkedAttr = it.checked === false ? '' : 'checked';
         html += '<div class="layer-row"><div class="layer-info">' +
           '<div class="dot" style="background:' + it.color + '"></div>' + it.label + '</div>' +
           '<label class="toggle" style="--c:' + it.color + '">' +
-          '<input type="checkbox" id="cb_' + it.key + '" checked onchange="' + it.fn + '">' +
+          '<input type="checkbox" id="cb_' + it.key + '" ' + checkedAttr + ' onchange="' + it.fn + '">' +
           '<span class="slider"></span></label></div>';
       });
       document.getElementById('layerToggles').innerHTML = html;
