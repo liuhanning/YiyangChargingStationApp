@@ -110,12 +110,34 @@ for rid, name, township in rows:
 
 conn.commit()
 
+# ── 3. 城区现状充电站编码 ─────────────────────────────
+print("\n=== 城区充电站地理编码 ===")
+rows = conn.execute(
+    "SELECT id, station_name, address FROM stations_urban_coords WHERE longitude IS NULL AND station_name IS NOT NULL"
+).fetchall()
+for rid, name, addr in rows:
+    search_addr = f"弋阳县{name}" if not addr else f"弋阳县{addr}"
+    lng, lat, fmt = geocode(search_addr)
+    if lng:
+        conn.execute(
+            "UPDATE stations_urban_coords SET longitude=?,latitude=? WHERE id=?",
+            (lng, lat, rid)
+        )
+        print(f"  ✓ {name}  ({lng:.4f},{lat:.4f})")
+    else:
+        print(f"  ✗ {name}  编码失败")
+    time.sleep(0.1)
+conn.commit()
+
 # ── 验证 ──────────────────────────────────────────────
 print("\n=== 编码结果统计 ===")
 g_total = conn.execute("SELECT COUNT(*) FROM gas_stations").fetchone()[0]
 g_ok    = conn.execute("SELECT COUNT(*) FROM gas_stations WHERE longitude IS NOT NULL").fetchone()[0]
 p_total = conn.execute("SELECT COUNT(*) FROM stations_planned WHERE station_name IS NOT NULL").fetchone()[0]
 p_ok    = conn.execute("SELECT COUNT(*) FROM stations_planned WHERE longitude IS NOT NULL").fetchone()[0]
+u_total = conn.execute("SELECT COUNT(*) FROM stations_urban_coords").fetchone()[0]
+u_ok    = conn.execute("SELECT COUNT(*) FROM stations_urban_coords WHERE longitude IS NOT NULL").fetchone()[0]
 print(f"加油站:     {g_ok}/{g_total} 获得坐标")
 print(f"规划站点:   {p_ok}/{p_total} 获得坐标")
+print(f"城区站点:   {u_ok}/{u_total} 获得坐标")
 conn.close()

@@ -72,12 +72,12 @@ COUNTY_BOUNDARY_DEFAULT = [
 
 # ===== 视觉样式配置（浅色主题 - 参考001截图风格）=====
 STYLE_CONFIG = {
-    # 县域边界样式 - 专业规划蓝边界
+    # 县域边界样式 - 专业规划深蓝色
     "county_boundary": {
-        "stroke_color": "#1E88E5",  # 从红色 #cc3333 改为专业蓝色
-        "stroke_width": 3,
-        "fill_color": "#fffff0",
-        "fill_opacity": 0.45,
+        "stroke_color": "#1E3A8A",  # 深灰蓝/藏青色，更加沉稳专业，适合配合灰绿底图
+        "stroke_width": 4,
+        "fill_color": "rgba(0,0,0,0)",
+        "fill_opacity": 0.0,
     },
 
     # 聚光灯遮罩样式 - 柔和灰色

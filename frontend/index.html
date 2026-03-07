@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>弋阳县充换电设施规划地图</title>
   <meta name="description" content="弋阳县充换电设施规划动态地图系统，数据实时读取自SQLite数据库">
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -58,7 +59,8 @@
     }
 
     #map {
-      width: 100%;
+      width: calc(100% - 220px);
+      margin-left: 220px;
       height: calc(100vh - 52px);
       position: relative;
       z-index: 1
@@ -112,19 +114,73 @@
       }
     }
 
-    /* 控制面板 - 浅色磨砂 */
-    .ctrl {
-      position: fixed !important;
-      left: 12px;
-      z-index: 9999 !important;
-      background: rgba(255, 255, 255, 0.96);
+    /* ===== 左侧统一侧边栏 ===== */
+    #sidebar {
+      position: fixed;
+      top: 56px;
+      left: 0;
+      width: 220px;
+      height: calc(100vh - 56px);
+      z-index: 9999;
+      background: rgba(255, 255, 255, 0.97);
       backdrop-filter: blur(8px);
-      border: 1px solid #d0d7de;
-      border-radius: 10px;
-      padding: 12px;
-      width: 210px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-      pointer-events: auto !important;
+      border-right: 1px solid #d0d7de;
+      box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08);
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      pointer-events: auto;
+    }
+
+    #sidebar::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    #sidebar::-webkit-scrollbar-thumb {
+      background: #c0cfd8;
+      border-radius: 2px;
+    }
+
+    .sb-section {
+      border-bottom: 1px solid #eef1f4;
+    }
+
+    .sb-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 12px;
+      font-weight: 700;
+      color: #1a3a5c;
+      letter-spacing: 0.3px;
+      background: #f8fafc;
+    }
+
+    .sb-header:hover {
+      background: #f0f5fa;
+    }
+
+    .sb-arrow {
+      font-size: 10px;
+      color: #8ba3b8;
+      transition: transform 0.2s;
+    }
+
+    .sb-body {
+      padding: 8px 12px 10px;
+    }
+
+    .sb-body.collapsed {
+      display: none;
+    }
+
+    /* Keep .ctrl class for any remnant - redirect visually */
+    .ctrl {
+      display: none !important;
     }
 
     .ctrl-title {
@@ -302,12 +358,12 @@
       bottom: 16px;
       right: 16px;
       z-index: 9999;
-      background: rgba(255, 255, 255, 0.95);
+      background: rgba(255, 255, 255, 0.82);
       backdrop-filter: blur(8px);
-      border: 1px solid #d0d7de;
+      border: 1px solid rgba(208, 215, 222, 0.6);
       border-radius: 10px;
       padding: 14px 18px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
       font-size: 12px;
       color: #2c3e50;
       line-height: 1.8;
@@ -413,6 +469,45 @@
         1px 1px 0 #fff,
         0px 2px 4px rgba(0, 0, 0, 0.4);
     }
+
+    /* 终极解法：使用 CSS 在物理渲染层强制屏蔽天地图各类汉字注记切片（cva_w/cva_c/eva_w/eva_c） */
+    img[src*="cva_"],
+    img[src*="eva_"],
+    img[src*="cva"],
+    img[src*="eva"] {
+      display: none !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+    }
+
+    /* 极简指北针 */
+    #compass {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      width: 24px;
+      text-align: center;
+      pointer-events: none;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    }
+
+    #compass .n {
+      font-size: 16px;
+      font-weight: 900;
+      font-family: 'Arial Black', sans-serif;
+      color: #333;
+      margin-bottom: -2px;
+    }
+
+    #compass .arrow {
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-bottom: 24px solid #1a3a5c;
+      margin: 0 auto;
+    }
   </style>
 </head>
 
@@ -438,40 +533,99 @@
     </div>
   </div>
 
-  <div id="map"></div>
-
-  <!-- 地图样式 -->
-  <div class="ctrl" style="top:64px" id="panelStyle">
-    <div class="ctrl-title">🗺️ 地图样式</div>
-    <select id="mapStyle" onchange="changeMapStyle(this.value)"
-      style="width:100%;padding:7px;border:1px solid #d0d7de;border-radius:6px;font-size:12px;background:#fff;color:#2c3e50">
-      <option value="standard">标准地图</option>
-      <option value="satellite">卫星影像</option>
-    </select>
+  <div id="map">
+    <!-- 指北针叠加在地图右上角 -->
+    <div id="compass">
+      <div class="n">N</div>
+      <div class="arrow"></div>
+    </div>
   </div>
 
-  <!-- 显示模式 -->
-  <div class="ctrl" style="top:148px" id="panelMode">
-    <div class="ctrl-title">📋 显示模式</div>
-    <div id="modeButtons">加载中...</div>
-  </div>
+  <!-- 左侧统一侧边栏 -->
+  <div id="sidebar">
 
-  <!-- 图层控制 -->
-  <div class="ctrl" style="top:376px" id="panelLayers">
-    <div class="ctrl-title">📂 图层控制</div>
-    <div id="layerToggles">加载中...</div>
+    <!-- 地图样式 -->
+    <div class="sb-section">
+      <div class="sb-header" onclick="toggleSb('sbMapStyle')">
+        <span>&#x1F5FA; 地图样式</span><span class="sb-arrow" id="arrMapStyle">&#9660;</span>
+      </div>
+      <div class="sb-body" id="sbMapStyle">
+        <select id="mapStyle" onchange="changeMapStyle(this.value)"
+          style="width:100%;padding:6px;border:1px solid #d0d7de;border-radius:6px;font-size:12px;background:#fff;color:#2c3e50">
+          <option value="standard">&#x1F5FA; 标准矢量地图</option>
+          <option value="satellite">&#x1F6F0; 卫星影像+路网</option>
+          <option value="terrain" selected>&#x26F0; 地形渲染地图</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 显示模式 -->
+    <div class="sb-section">
+      <div class="sb-header" onclick="toggleSb('sbMode')">
+        <span>&#x1F4CB; 显示模式</span><span class="sb-arrow" id="arrMode">&#9660;</span>
+      </div>
+      <div class="sb-body" id="sbMode">
+        <div id="modeButtons">加载中...</div>
+      </div>
+    </div>
+
+    <!-- 图层控制 -->
+    <div class="sb-section">
+      <div class="sb-header" onclick="toggleSb('sbLayers')">
+        <span>&#x1F4C2; 图层控制</span><span class="sb-arrow" id="arrLayers">&#9660;</span>
+      </div>
+      <div class="sb-body" id="sbLayers">
+        <div id="layerToggles">加载中...</div>
+      </div>
+    </div>
+
+    <!-- 分类筛选 -->
+    <div class="sb-section">
+      <div class="sb-header" onclick="toggleSb('sbFilter')">
+        <span>&#x1F50D; 充电设施类型筛选</span><span class="sb-arrow" id="arrFilter">&#9660;</span>
+      </div>
+      <div class="sb-body" id="sbFilter">
+        <div id="catFilters"></div>
+        <button onclick="resetCatFilter()"
+          style="margin-top:6px;width:100%;padding:5px;border:1px solid #d0d7de;border-radius:5px;font-size:11px;background:#f8fafc;cursor:pointer;color:#2c3e50">重置全部显示</button>
+      </div>
+    </div>
+
+    <!-- 图例 -->
+    <div class="sb-section">
+      <div class="sb-header" onclick="toggleSb('sbLegend')">
+        <span>&#x1F4CC; 图例</span><span class="sb-arrow" id="arrLegend">&#9660;</span>
+      </div>
+      <div class="sb-body" id="sbLegend">
+        <div id="legendContent">加载中...</div>
+      </div>
+    </div>
+
+    <!-- 导出工具 (暂时隐藏) -->
+    <div class="sb-section" style="display: none;">
+      <div class="sb-header" onclick="toggleSb('sbExport')">
+        <span>&#x1F4F8; 导出截图</span><span class="sb-arrow" id="arrExport">&#9660;</span>
+      </div>
+      <div class="sb-body" id="sbExport">
+        <button onclick="exportMapSnapshot('full')"
+          style="width:100%;padding:6px;margin-bottom:6px;background:#3498db;color:#fff;border:none;border-radius:4px;cursor:pointer;">&#x1F5BC;
+          导出完整合成图</button>
+        <button onclick="exportMapSnapshot('base')"
+          style="width:100%;padding:6px;margin-bottom:6px;background:#95a5a6;color:#fff;border:none;border-radius:4px;cursor:pointer;">&#x1F5FA;
+          仅导出底图与边界</button>
+        <button onclick="exportMapSnapshot('points')"
+          style="width:100%;padding:6px;background:#e67e22;color:#fff;border:none;border-radius:4px;cursor:pointer;">&#x1F4CD;
+          仅导出覆盖点位</button>
+        <div style="font-size:10px;color:#888;margin-top:6px;">提示：分别导出后可在 PPT 中叠加使用</div>
+      </div>
+    </div>
+
   </div>
 
   <!-- 右下角统计 -->
   <div id="stats-panel">
-    <div class="stats-title">📊 弋阳县充电设施概况</div>
+    <div class="stats-title">&#x1F4CA; 弋阳县充电设施概况</div>
     <div id="statsContent">加载中...</div>
-  </div>
-
-  <!-- 左下角图例 -->
-  <div id="legend">
-    <div class="legend-title">📌 图例</div>
-    <div id="legendContent">加载中...</div>
   </div>
 
   <!-- 数据源指示 -->
@@ -485,10 +639,235 @@
     var map, imageLayer, vectorLayer;
     var layers = { urban: [], gas: [], plan: [], radius_existing: [], radius_planned: [] };
     var maskOverlay = null, countyPolygon = null, countyLabel = null;
+    var innerFlattener = null, countyGlow = null, elevationShadow = null;
     var townshipLabels = [];
     var townshipPolygons = [];
     var BOUNDARY = [];
     var TOWNSHIP_DATA = null;
+    var allPlannedData = [];   // 全量规划站数据，用于类型筛选
+    var activeCats = null;     // null = 全部显示
+
+    // ===== 导出截图逻辑 =====
+    function exportMapSnapshot(mode) {
+      // 准备导出前，调整图层可见性
+      var mapContainer = document.getElementById('map');
+      var tilePane = document.querySelector('.tdt-tile-pane'); // 天地图瓦片层
+      var oldBg = mapContainer.style.background;
+      var oldTileDisplay = tilePane ? tilePane.style.display : '';
+
+      // 记录那些可能会被临时隐藏的 marker
+      var hideMarkers = function (hide) {
+        var op = hide ? 'removeOverLay' : 'addOverLay';
+        ['urban', 'gas', 'plan'].forEach(function (l) {
+          layers[l].forEach(function (mk) { map[op](mk); });
+        });
+      };
+
+      var oldMaskColor = null, oldMaskOpacity = null;
+
+      if (mode === 'base') {
+        // 仅底图与边界：隐藏点位和信息
+        hideMarkers(true);
+      } else if (mode === 'points') {
+        // 仅点位：隐藏瓦片底图，隐藏物理阴影和压片遮罩，把地图背景设为全透或纯白
+        if (tilePane) tilePane.style.display = 'none';
+        mapContainer.style.background = '#ffffff';
+        if (maskOverlay) map.removeOverLay(maskOverlay);
+        if (elevationShadow) map.removeOverLay(elevationShadow);
+        if (innerFlattener) map.removeOverLay(innerFlattener);
+        if (countyGlow) map.removeOverLay(countyGlow);
+        if (countyPolygon) map.removeOverLay(countyPolygon);
+      }
+
+      // 导出规划图效果：将外部遮罩调成极其浅白，模仿专业规划底图（洗白周边县市图层肌理）
+      if (mode !== 'points' && maskOverlay) {
+        oldMaskColor = maskOverlay.getFillColor();
+        oldMaskOpacity = maskOverlay.getFillOpacity();
+        maskOverlay.setFillColor('#ffffff');
+        maskOverlay.setFillOpacity(0.88);
+      }
+
+      // 1. 获取县域的精确包围盒
+      var minLng = 180, maxLng = -180, minLat = 90, maxLat = -90;
+      if (BOUNDARY && BOUNDARY.length > 0) {
+        BOUNDARY.forEach(function (p) {
+          if (p[0] < minLng) minLng = p[0];
+          if (p[0] > maxLng) maxLng = p[0];
+          if (p[1] < minLat) minLat = p[1];
+          if (p[1] > maxLat) maxLat = p[1];
+        });
+      }
+      var lngSpan = maxLng - minLng;
+      var latSpan = maxLat - minLat;
+
+      // 构建一个包含 15% 额外边距的虚拟边界，利用引擎的原生自适应来实现“居中且留出一定空间”的效果
+      var bufferPts = [
+        new T.LngLat(minLng - lngSpan * 0.15, minLat - latSpan * 0.15),
+        new T.LngLat(maxLng + lngSpan * 0.15, maxLat + latSpan * 0.15)
+      ];
+
+      // 2. 强制视角归中自适应。这会同时强制清空之前的 CSS Translate 偏移，解决导出错位问题
+      map.setViewport(bufferPts);
+      var curCenter = map.getCenter();
+      var curZoom = map.getZoom();
+      map.centerAndZoom(curCenter, curZoom);
+
+      var rect = mapContainer.getBoundingClientRect();
+      // 获取正方形尺寸，根据需求“最好是个正方形”设定等高宽裁切
+      var size = Math.min(rect.width, rect.height);
+      var offsetX = (rect.width - size) / 2;
+      var offsetY = (rect.height - size) / 2;
+
+      // 3. 动态注入规范化的高级贴图：标题框与黑边细外框
+      var titleDiv = document.createElement('div');
+      titleDiv.id = 'export-title-overlay';
+      titleDiv.style.position = 'absolute';
+      titleDiv.style.top = (offsetY + size * 0.04) + 'px';
+      titleDiv.style.left = offsetX + 'px';
+      titleDiv.style.width = size + 'px';
+      titleDiv.style.textAlign = 'center';
+      titleDiv.style.zIndex = '100000';
+      titleDiv.style.pointerEvents = 'none';
+      var titleName = mode === 'base' ? '弋阳县行政区划及地形边界轮廓图' : '弋阳县新能源汽车充换电基础设施发展规划（2026年）';
+      titleDiv.innerHTML = '<h1 style="font-family:\'SimHei\', \'Microsoft YaHei\', sans-serif; font-size: ' + Math.max(26, size * 0.04) + 'px; font-weight: 900; letter-spacing: 3px; color: #111; margin: 0; text-shadow: 2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 0 8px 12px rgba(0,0,0,0.15);">' + titleName + '</h1>';
+
+      var exportBorder = document.createElement('div');
+      exportBorder.id = 'export-border-overlay';
+      exportBorder.style.position = 'absolute';
+      exportBorder.style.top = (offsetY + 15) + 'px';
+      exportBorder.style.left = (offsetX + 15) + 'px';
+      exportBorder.style.width = (size - 30) + 'px';
+      exportBorder.style.height = (size - 30) + 'px';
+      exportBorder.style.border = '2px solid #000'; // 细实黑线规范排版
+      exportBorder.style.boxSizing = 'border-box';
+      exportBorder.style.zIndex = '99999';
+      exportBorder.style.pointerEvents = 'none';
+
+      if (mode !== 'points') {
+        mapContainer.appendChild(exportBorder);
+      }
+      mapContainer.appendChild(titleDiv);
+
+      // 4. 略微延迟以等待图层刷新、瓦片加载以及 CSS 生效
+      setTimeout(function () {
+        var cropX = rect.left + window.scrollX + offsetX;
+        var cropY = rect.top + window.scrollY + offsetY;
+
+        html2canvas(mapContainer, {
+          useCORS: true,
+          allowTaint: false,
+          scale: 2, // 提高导出清晰度，视网膜级
+          windowWidth: document.documentElement.clientWidth,
+          windowHeight: document.documentElement.clientHeight,
+          scrollX: 0,
+          scrollY: 0,
+          x: cropX,
+          y: cropY,
+          width: size,
+          height: size,
+          backgroundColor: (mode === 'points') ? null : '#ffffff' // 方形背景底色
+        }).then(function (canvas) {
+          // 清理动态注入的节点
+          if (titleDiv && titleDiv.parentNode) titleDiv.parentNode.removeChild(titleDiv);
+          if (exportBorder && exportBorder.parentNode) exportBorder.parentNode.removeChild(exportBorder);
+
+          // 恢复现场
+          if (mode === 'base') {
+            hideMarkers(false);
+          } else if (mode === 'points') {
+            if (tilePane) tilePane.style.display = oldTileDisplay;
+            mapContainer.style.background = oldBg;
+            if (maskOverlay) map.addOverLay(maskOverlay);
+            if (elevationShadow) map.addOverLay(elevationShadow);
+            if (innerFlattener) map.addOverLay(innerFlattener);
+            if (countyGlow) map.addOverLay(countyGlow);
+            if (countyPolygon) map.addOverLay(countyPolygon);
+          }
+
+          if (mode !== 'points' && maskOverlay && oldMaskColor) {
+            maskOverlay.setFillColor(oldMaskColor);
+            maskOverlay.setFillOpacity(oldMaskOpacity);
+          }
+
+          // 触发下载
+          var link = document.createElement('a');
+          link.download = 'map_export_' + mode + '_' + new Date().getTime() + '.png';
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        }).catch(function (err) {
+          // 异常回调也要清理节点
+          if (titleDiv && titleDiv.parentNode) titleDiv.parentNode.removeChild(titleDiv);
+          if (exportBorder && exportBorder.parentNode) exportBorder.parentNode.removeChild(exportBorder);
+          alert('截图导出失败：' + err.message);
+        });
+      }, 1000);
+    }
+
+    // ===== 侧边栏折叠 =====
+    function toggleSb(id) {
+      var body = document.getElementById(id);
+      var arrId = 'arr' + id.charAt(2).toUpperCase() + id.slice(3);
+      var arr = document.getElementById(arrId);
+      var collapsed = body.classList.toggle('collapsed');
+      if (arr) arr.innerHTML = collapsed ? '&#9654;' : '&#9660;';
+    }
+
+    // ===== 分类筛选 =====
+    function buildCatFilters() {
+      var cats = [
+        { code: 0, fill: '#003399', label: '现状公共充电站' },
+        { code: 1, fill: '#F59E0B', label: '规划·公共充电设施' },
+        { code: 2, fill: '#B45309', label: '规划·专用充电设施' },
+        { code: 3, fill: '#16A34A', label: '规划·农村普惠设施' },
+        { code: 4, fill: '#7C3AED', label: '规划·旅游景区设施' },
+        { code: 5, fill: '#DC2626', label: '综合能源站' },
+      ];
+      var html = '';
+      cats.forEach(function (c) {
+        html += '<div class="layer-row" style="padding:5px 0">' +
+          '<div class="layer-info">' +
+          '<div style="width:12px;height:12px;border-radius:50%;background:' + c.fill + ';flex-shrink:0"></div>' +
+          '<span style="font-size:11px">' + c.label + '</span></div>' +
+          '<label class="toggle" style="--c:' + c.fill + '">' +
+          '<input type="checkbox" id="cf_' + c.code + '" checked onchange="applyCatFilter()">' +
+          '<span class="slider"></span></label></div>';
+      });
+      document.getElementById('catFilters').innerHTML = html;
+    }
+
+    function applyCatFilter() {
+      var checked = [];
+      for (var i = 0; i <= 5; i++) {
+        var cb = document.getElementById('cf_' + i);
+        if (cb && cb.checked) checked.push(i);
+      }
+      activeCats = checked;
+
+      // 重绘规划点
+      layers.plan.forEach(function (mk) { map.removeOverLay(mk); });
+      layers.radius_planned.forEach(function (c) { map.removeOverLay(c); });
+      layers.plan = []; layers.radius_planned = [];
+
+      var filtered = allPlannedData.filter(function (d) {
+        return activeCats.indexOf(d.category_code || 1) >= 0;
+      });
+      plotPlan(filtered);
+
+      // 现状站和加油站
+      var showUrban = checked.indexOf(0) >= 0;
+      layers.urban.forEach(function (mk) { showUrban ? map.addOverLay(mk) : map.removeOverLay(mk); });
+      var showGas = checked.indexOf(5) >= 0;
+      layers.gas.forEach(function (mk) { showGas ? map.addOverLay(mk) : map.removeOverLay(mk); });
+    }
+
+    function resetCatFilter() {
+      for (var i = 0; i <= 5; i++) {
+        var cb = document.getElementById('cf_' + i);
+        if (cb) cb.checked = true;
+      }
+      applyCatFilter();
+    }
+
 
     // ===== 启动函数 =====
     async function boot() {
@@ -530,14 +909,17 @@
         buildModeButtons(CFG.modes);
         buildLayerToggles(CFG.styles);
         buildLegend(CFG.styles);
+        buildCatFilters();
 
         // 7. 初始化地图
         initMap();
 
         // 8. 绑定数据
+        allPlannedData = planned.stations;  // 缓存全量数据供筛选使用
         plotUrban(urban.stations);
         plotGas(gas.stations);
         plotPlan(planned.stations);
+
 
         // 9. 绘制乡镇边界 + 标注（从Shapefile API获取）
         if (TOWNSHIP_DATA && TOWNSHIP_DATA.geojson) {
@@ -586,6 +968,9 @@
       map = new T.Map('map');
       map.centerAndZoom(new T.LngLat(CFG.center[0], CFG.center[1]), 11);
 
+      // 默认使用地形图并附带晕渲底图效果
+      changeMapStyle('terrain');
+
       // 增加比例尺控件
       var scale = new T.Control.Scale();
       map.addControl(scale);
@@ -593,51 +978,161 @@
       if (BOUNDARY.length > 0) {
         createCountyHighlight(BOUNDARY);
       }
+
+      // ========== 核心修复：完全接管滚轮缩放，消除多重放缩跳跃 ==========
+      map.disableScrollWheelZoom(); // 关闭天地图自带的高敏滚轮放大
+      var zoomWheelState = { lastTime: 0, isThrottled: false };
+      var mapContainer = document.getElementById('map');
+
+      mapContainer.addEventListener('wheel', function (e) {
+        e.preventDefault(); // 阻止浏览器默认滚动
+
+        if (zoomWheelState.isThrottled) return;
+        var now = Date.now();
+        if (now - zoomWheelState.lastTime < 300) return; // 严格限流 300ms 一次放大/缩小
+
+        zoomWheelState.isThrottled = true;
+        zoomWheelState.lastTime = now;
+
+        if (e.deltaY < 0) {
+          map.zoomIn();
+        } else if (e.deltaY > 0) {
+          map.zoomOut();
+        }
+
+        setTimeout(function () { zoomWheelState.isThrottled = false; }, 300);
+      }, { passive: false, capture: true });
+
+      // ===== 随缩放动态调整图标大小 =====
+      // zoom ≤8: 极小 / 9-10: 小 / 11-12: 中(默认) / 13+: 稍大
+      map.addEventListener('zoomend', function () {
+        var z = map.getZoom();
+        var scale = z <= 8 ? 0.5 : z <= 10 ? 0.7 : z <= 12 ? 1.0 : 1.3;
+        updateAllMarkerSizes(scale);
+      });
     }
 
-    // 创建县域高亮效果（参考001截图风格 - 从配置读取样式）
-    function createCountyHighlight(bounds) {
-      var maskStyle = CFG.styles.spotlight_mask;
-      var boundaryStyle = CFG.styles.county_boundary;
+    // 根据缩放系数更新所有 marker 图标大小
+    function updateAllMarkerSizes(scale) {
+      // 基础尺寸缩小到 16×20，zoom 11-12 时为实际渲染大小
+      var W0 = 16, H0 = 20;
+      var W = Math.round(W0 * scale), H = Math.round(H0 * scale);
 
-      // 1. 外部遮罩 - 带洞（通过两环数组实现镂空效果）
-      var outer = [[110.0, 20.0], [125.0, 20.0], [125.0, 35.0], [110.0, 35.0], [110.0, 20.0]];
-      var maskPts = outer.map(function (p) { return new T.LngLat(p[0], p[1]); });
+      // 遍历每个 marker，重新生成缩放后的图标
+      function rescaleMarkers(markerList, codeGetter) {
+        markerList.forEach(function (mk) {
+          if (!mk._gisCode && mk._gisCode !== 0) return;
+          var icon = mkGisIconSized(mk._gisCode, mk._gisQty || 0, mk._gisYear || null, W, H);
+          mk.setIcon(icon);
+        });
+      }
+
+      layers.urban.forEach(function (mk) {
+        mk.setIcon(mkGisIconSized(0, 0, null, W, H));
+      });
+      layers.gas.forEach(function (mk) {
+        mk.setIcon(mkGisIconSized(5, 0, null, W, H));
+      });
+      layers.plan.forEach(function (mk) {
+        if (mk._gisCode !== undefined) {
+          mk.setIcon(mkGisIconSized(mk._gisCode, mk._gisQty || 0, mk._gisYear, W, H));
+        }
+      });
+
+      // 缩放乡镇名称标注
+      townshipLabels.forEach(function (l) {
+        var baseFs = l._baseFontSize || 14;
+        l.setFontSize(Math.max(10, Math.round(baseFs * scale)));
+      });
+    }
+
+    // 支持自定义尺寸的 GIS 图标生成函数
+    function mkGisIconSized(code, qty, year, W, H) {
+      W = W || 26; H = H || 32;
+      var st = CAT_STYLES[code] || CAT_STYLES[1];
+      var fill = (code === 0 || code === 5) ? st.fill : 'rgba(255,255,255,0.92)';
+      var textColor = (code === 0 || code === 5) ? '#fff' : st.stroke;
+      var fs = Math.round(W * 0.46);
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">';
+      svg += '<defs><filter id="sh2"><feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-opacity="0.2"/></filter></defs>';
+      svg += '<polygon points="' + (W / 2 - 4) + ',' + (H - 4) + ' ' + (W / 2 + 4) + ',' + (H - 4) + ' ' + (W / 2) + ',' + H + '" fill="' + st.stroke + '"/>';
+      svg += '<rect x="1" y="1" width="' + (W - 2) + '" height="' + (H - 8) + '" rx="3" ry="3" fill="' + fill + '" stroke="' + st.stroke + '" stroke-width="2"';
+      if (st.dash) svg += ' stroke-dasharray="' + st.dash + '"';
+      svg += ' filter="url(#sh2)"/>';
+      svg += '<text x="50%" y="44%" text-anchor="middle" dy=".35em" font-family="Arial,sans-serif" font-size="' + fs + '" fill="' + textColor + '" font-weight="bold">' + st.sym + '</text>';
+      if (qty > 0 && code >= 1 && code <= 4) {
+        var r = Math.max(5, Math.round(W * 0.24));
+        svg += '<circle cx="' + (W - r) + '" cy="' + r + '" r="' + r + '" fill="' + st.stroke + '"/>';
+        svg += '<text x="' + (W - r) + '" y="' + r + '" text-anchor="middle" dy=".35em" font-size="' + Math.max(5, r - 1) + '" font-family="Arial" fill="#fff">' + qty + '</text>';
+      }
+      if (year && code >= 1 && code <= 4) {
+        var yc = YEAR_COLOR[year] || '#64748B';
+        svg += '<rect x="3" y="' + (H - 10) + '" width="' + (W - 6) + '" height="3" rx="1" fill="' + yc + '"/>';
+      }
+      svg += '</svg>';
+      return new T.Icon({ iconUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg), iconSize: new T.Point(W, H), iconAnchor: new T.Point(W / 2, H) });
+    }
+
+
+    // 创建县域内外遮罩与发光边界带
+    function createCountyHighlight(bounds) {
+      var boundaryStyle = CFG.styles.county_boundary;
       var innerPts = bounds.map(function (p) { return new T.LngLat(p[0], p[1]); });
 
-      // 添加判断避免错误，如果 T.Polygon 传入多数组实现镂空
+      // 1. 外部反向遮罩：全白 60% 透明度，虚化非重点区域（白边蒙版）
+      var outer = [[180, 90], [-180, 90], [-180, -90], [180, -90], [180, 90]];
+      var maskPts = outer.map(function (p) { return new T.LngLat(p[0], p[1]); });
       maskOverlay = new T.Polygon([maskPts, innerPts], {
         color: 'transparent', weight: 0, opacity: 0,
-        fillColor: maskStyle.fill_color,
-        fillOpacity: maskStyle.fill_opacity
+        fillColor: '#ffffff',
+        fillOpacity: 0.65
       });
       map.addOverLay(maskOverlay);
 
-      // 2. 县域多边形 - 浅色高亮 + 红色边框
+      // 1.5 物理阴影：制作一个偏右下方的不透光薄暗层，模拟 3D 悬浮投影
+      var shadowPts = bounds.map(function (p) { return new T.LngLat(p[0] + 0.008, p[1] - 0.008); });
+      elevationShadow = new T.Polygon(shadowPts, {
+        color: 'transparent', weight: 0, opacity: 0,
+        fillColor: '#000000',
+        fillOpacity: 0.15
+      });
+      map.addOverLay(elevationShadow);
+
+      // 2. 内部底图色彩压平：淡青灰绿 #E0EEE0 40% 透明度，彻底压平影像杂色
+      innerFlattener = new T.Polygon(innerPts, {
+        color: 'transparent', weight: 0, opacity: 0,
+        fillColor: '#E0EEE0',
+        fillOpacity: 0.40
+      });
+      map.addOverLay(innerFlattener);
+
+      // 3. 边界发光带：底侧更宽的柔边光晕（深邃呼吸感）
+      var themeColor = boundaryStyle.stroke_color || '#1E3A8A';
+      countyGlow = new T.Polygon(innerPts, {
+        color: themeColor,
+        weight: 12,
+        opacity: 0.35,
+        fillColor: 'transparent',
+        fillOpacity: 0,
+        lineStyle: 'solid'
+      });
+      map.addOverLay(countyGlow);
+
+      // 4. 边界顶层细线：从白色改为同色细虚线，增加边界清晰度和发光层次感
       countyPolygon = new T.Polygon(innerPts, {
-        color: boundaryStyle.stroke_color,
-        weight: boundaryStyle.stroke_width,
+        color: themeColor,
+        weight: 1.5,
         opacity: 0.9,
-        fillColor: boundaryStyle.fill_color,
-        fillOpacity: boundaryStyle.fill_opacity
+        fillColor: 'transparent',
+        fillOpacity: 0,
+        lineStyle: 'dashed'
       });
       map.addOverLay(countyPolygon);
 
-      // 3. 县名标注
-      countyLabel = new T.Label({
-        text: CFG.county_name,
-        position: new T.LngLat(CFG.center[0], CFG.center[1]),
-        offset: new T.Point(-30, -12)
-      });
-      countyLabel.setFontSize(18);
-      countyLabel.setFontColor('#1a3a5c');
-      countyLabel.setBorderColor('transparent');
-      countyLabel.setBackgroundColor('rgba(255,255,255,0.7)');
-      map.addOverLay(countyLabel);
-
-      // 4. 自适应视图
+      // 5. 自适应视图
       map.setViewport(innerPts);
     }
+
 
     // 绘制乡镇边界多边形（从GeoJSON）
     function drawTownshipBoundaries(geojson) {
@@ -691,6 +1186,7 @@
           offset: new T.Point(-20, -8)
         });
         label.setFontSize(labelStyle.fontsize);
+        label._baseFontSize = labelStyle.fontsize; // 缓存供缩放使用
         label.setFontColor(labelStyle.color);
         label.setBorderColor(labelStyle.border);
         label.setBackgroundColor(labelStyle.background);
@@ -699,29 +1195,88 @@
       });
     }
 
+
+    // ===== 规划图风格图标体系 =====
+    // 参考上栗县规划图风格：简单实心圆 + 极小尺寸 + 无边框阴影
+    var CAT_STYLES = {
+      0: { fill: '#003399', sym: '★', label: '现状公共充电站' },     // 深蓝实心 ★
+      1: { fill: '#F59E0B', sym: '★', label: '规划·公共充电设施' },  // 橙黄 ★（对应参考图）
+      2: { fill: '#B45309', sym: '◆', label: '规划·专用充电设施' },  // 深棕 ◆
+      3: { fill: '#16A34A', sym: '●', label: '规划·农村普惠设施' },  // 绿色 ●
+      4: { fill: '#7C3AED', sym: '★', label: '规划·旅游景区设施' }, // 紫色 ★
+      5: { fill: '#DC2626', sym: '⊕', label: '综合能源站' },         // 红色 ⊕（换电站风格）
+    };
+    var YEAR_COLOR = { 2026: '#1E3A8A', 2027: '#2563EB', 2028: '#93C5FD' };
+
+    // mkGisIcon：生成规划圆形图标（默认基础尺寸）
+    function mkGisIcon(code, qty, year) {
+      return mkGisIconSized(code, qty, year, 14, 14);
+    }
+
+    // 支持自定义尺寸的规划圆形图标（带外围扁平化光晕扩散效果 + 层级大小区分）
+    function mkGisIconSized(code, qty, year, W, H) {
+      W = W || 14; H = H || 14;
+
+      // 区分大小：现状公共站、规划公共站、综合能源站视觉上放大 30% 突出显示
+      if (code === 0 || code === 1 || code === 5) {
+        W = Math.round(W * 1.3);
+        H = Math.round(H * 1.3);
+      } else {
+        W = Math.round(W * 0.85); // 专用、景区、农村点位适当缩小
+        H = Math.round(H * 0.85);
+      }
+
+      var st = CAT_STYLES[code] || CAT_STYLES[1];
+      // 给 SVG 画布留出足够的扩展空间用于外发光涟漪
+      var Wbox = W + 12, Hbox = H + 12;
+      var R = Math.floor(Math.min(W, H) / 2);
+      var cx = Wbox / 2, cy = Hbox / 2;
+      var fs = Math.max(5, Math.round(R * 0.9));
+
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + Wbox + '" height="' + Hbox + '" viewBox="0 0 ' + Wbox + ' ' + Hbox + '">';
+      // 1. 扁平化发光/扩散波纹蒙版外圈 (25%-30% 透明度)
+      svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + (R + 3.5) + '" fill="' + st.fill + '" fill-opacity="0.25"/>';
+      // 2. 实心圆本体，白边加粗增加质感，让图标在底图上“跳”出来
+      svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" fill="' + st.fill + '" stroke="#ffffff" stroke-width="1.8"/>';
+      // 3. 内部符号（白色）
+      svg += '<text x="50%" y="50%" text-anchor="middle" dy=".35em" font-family="Arial,sans-serif" font-size="' + fs + '" fill="white" font-weight="bold">' + st.sym + '</text>';
+      svg += '</svg>';
+
+      return new T.Icon({
+        iconUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
+        iconSize: new T.Point(Wbox, Hbox),
+        iconAnchor: new T.Point(cx, cy)
+      });
+    }
+
+
+
+    function mkIcon(color, text, size) {
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + (size + 8) + '" height="' + (size + 12) + '" viewBox="0 0 ' + (size + 8) + ' ' + (size + 12) + '"><circle cx="' + ((size + 8) / 2) + '" cy="' + ((size + 4) / 2) + '" r="' + (size / 2 + 1) + '" fill="' + color + '" stroke="white" stroke-width="2.5"/><text x="50%" y="' + ((size + 4) / 2) + '" text-anchor="middle" dy=".35em" font-size="' + Math.floor(size * 0.55) + '" fill="white">' + text + '</text></svg>';
+      return new T.Icon({ iconUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg), iconSize: new T.Point(size + 8, size + 12), iconAnchor: new T.Point((size + 8) / 2, (size + 8) / 2) });
+    }
+
     // ===== 绘制标注点 =====
     function plotUrban(data) {
-      var s = CFG.styles.station_existing;
       var sr = CFG.styles.radius_existing;
       data.forEach(function (d) {
-        // 5公里服务范围 (半径5公里)
         var circle = new T.Circle(new T.LngLat(d.lng, d.lat), 5000, {
           color: sr.color, weight: sr.weight, opacity: sr.opacity,
           fillColor: sr.fill_color, fillOpacity: sr.fill_opacity, lineStyle: 'solid'
         });
         circle.addEventListener('click', function () {
-          openInfo(d.lng, d.lat, '<div class="info-window"><div class="info-title">🗺️ 服务范围 (现有)</div><div class="info-row">所属站点：<b>' + d.name + '</b></div><div class="info-row">覆盖半径：<b>5 公里</b></div><div class="info-row">覆盖面积：<b>约 78.5 平方公里</b></div></div>');
+          openInfo(d.lng, d.lat, '<div class="info-window"><div class="info-title">&#128506; 服务范围 (现有)</div><div class="info-row">站点：<b>' + d.name + '</b></div><div class="info-row">覆盖半径：<b>5 公里</b></div></div>');
         });
         map.addOverLay(circle);
         layers.radius_existing.push(circle);
-
-        var mk = new T.Marker(new T.LngLat(d.lng, d.lat), { icon: mkIcon(s.color, s.icon, s.size) });
+        var mk = new T.Marker(new T.LngLat(d.lng, d.lat), { icon: mkGisIcon(0, 0, null) });
+        mk._gisCode = 0; mk._gisQty = 0; mk._gisYear = null;
         mk.addEventListener('click', function () {
           openInfo(d.lng, d.lat,
-            '<div class="info-window"><div class="info-title">⚡ ' + d.name + '</div>' +
-            '<div class="info-row">📍 地址：<b>' + d.addr + '</b></div>' +
-            '<div class="info-row">📐 坐标：' + d.lng.toFixed(6) + ', ' + d.lat.toFixed(6) + '</div>' +
-            '<div class="info-row"><span class="badge badge-green">✅ 已建成运营</span></div></div>'
+            '<div class="info-window"><div class="info-title" style="color:#003399">&#9889; ' + d.name + '</div>' +
+            '<div class="info-row">&#128205; 地址：<b>' + (d.addr || '—') + '</b></div>' +
+            '<div class="info-row">&#128210; 坐标：' + d.lng.toFixed(5) + ', ' + d.lat.toFixed(5) + '</div>' +
+            '<div class="info-row"><span class="badge badge-green">&#10003; 现状公共充电设施</span></div></div>'
           );
         });
         map.addOverLay(mk);
@@ -729,20 +1284,20 @@
       });
     }
 
+
     function plotGas(data) {
-      var s = CFG.styles.gas_station;
       data.forEach(function (d) {
         var lng = d.lng ? d.lng : CFG.center[0] + (Math.random() - 0.5) * 0.2;
         var lat = d.lat ? d.lat : CFG.center[1] + (Math.random() - 0.5) * 0.2;
-        var mk = new T.Marker(new T.LngLat(lng, lat), { icon: mkIcon(s.color, s.icon, s.size) });
+        // 综合能源站/加油站：实心橙色菱形图标
+        var mk = new T.Marker(new T.LngLat(lng, lat), { icon: mkGisIcon(5, 0, null) });
+        mk._gisCode = 5; mk._gisQty = 0; mk._gisYear = null;
         mk.addEventListener('click', function () {
           openInfo(lng, lat,
-            '<div class="info-window"><div class="info-title">⛽ ' + d.name + '</div>' +
-            '<div class="info-row">📍 地址：<b>' + d.addr + '</b></div>' +
-            '<div class="info-row">📊 年销量：<b>' + (d.sales || 0).toLocaleString() + ' 吨</b></div>' +
-            '<div class="info-row">💰 油品收入：<b>' + (d.revenue || 0).toLocaleString() + ' 万元</b></div>' +
-            '<div class="info-row"><span class="badge ' + (d.has_ev ? 'badge-green' : 'badge-orange') + '">' +
-            (d.has_ev ? '✅ 已有充电设施' : '⚠️ 待改造升级') + '</span></div></div>'
+            '<div class="info-window"><div class="info-title" style="color:#C2410C">&#9981; ' + d.name + '</div>' +
+            '<div class="info-row">&#128205; 地址：<b>' + (d.addr || '—') + '</b></div>' +
+            '<div class="info-row"><span class="badge badge-orange">' + (d.has_ev ? '&#10003; 已有充电设施' : '&#9888; 待改造升级') + '</span></div>' +
+            '</div>'
           );
         });
         map.addOverLay(mk);
@@ -751,31 +1306,32 @@
     }
 
     function plotPlan(data) {
-      var s = CFG.styles.station_planned;
       var sr = CFG.styles.radius_planned;
       data.forEach(function (d) {
         var lng = d.lng ? d.lng : CFG.center[0] + (Math.random() - 0.5) * 0.2;
         var lat = d.lat ? d.lat : CFG.center[1] + (Math.random() - 0.5) * 0.2;
-
-        // 5公里服务范围(规划), 半径5公里
         var circle = new T.Circle(new T.LngLat(lng, lat), 5000, {
           color: sr.color, weight: sr.weight, opacity: sr.opacity,
           fillColor: sr.fill_color, fillOpacity: sr.fill_opacity, lineStyle: 'dashed'
         });
         circle.addEventListener('click', function () {
-          openInfo(lng, lat, '<div class="info-window"><div class="info-title">🗺️ 服务范围 (规划)</div><div class="info-row">所属站点：<b>' + d.name + '</b></div><div class="info-row">覆盖半径：<b>5 公里</b></div><div class="info-row">覆盖面积：<b>约 78.5 平方公里</b></div></div>');
+          openInfo(lng, lat, '<div class="info-window"><div class="info-title">&#128506; 服务范围 (规划)</div><div class="info-row">站点：<b>' + d.name + '</b></div><div class="info-row">覆盖半径：<b>5 公里</b></div></div>');
         });
         map.addOverLay(circle);
         layers.radius_planned.push(circle);
 
-        var mk = new T.Marker(new T.LngLat(lng, lat), { icon: mkIcon(s.color, s.icon, s.size) });
+        var catCode = d.category_code || 1;
+        var st = CAT_STYLES[catCode] || CAT_STYLES[1];
+        var mk = new T.Marker(new T.LngLat(lng, lat), { icon: mkGisIcon(catCode, d.qty, d.year) });
+        mk._gisCode = catCode; mk._gisQty = d.qty; mk._gisYear = d.year;
         mk.addEventListener('click', function () {
           openInfo(lng, lat,
-            '<div class="info-window"><div class="info-title">🔋 ' + d.name + '</div>' +
-            '<div class="info-row">🏘️ 乡镇：<b>' + d.township + '</b>　📋 场景：<b>' + d.scene + '</b></div>' +
-            '<div class="info-row">🔌 桩数：<b>' + d.qty + ' 台</b>　⚡ 功率：<b>' + d.power + ' kW</b></div>' +
-            '<div class="info-row">🔧 设备：<b>' + d.equip + '</b></div>' +
-            '<div class="info-row"><span class="badge badge-blue">📅 ' + d.year + ' 年建设</span></div></div>'
+            '<div class="info-window"><div class="info-title" style="color:' + st.stroke + '">' + st.sym + ' ' + d.name + '</div>' +
+            '<div class="info-row">&#127968; 乡镇：<b>' + d.township + '</b></div>' +
+            '<div class="info-row"><span class="badge" style="background:#EFF6FF;color:' + st.stroke + ';border:1px solid ' + st.stroke + '">' + (d.category || '公共充电设施') + '</span>' +
+            '&nbsp;<span class="badge badge-blue">&#128197; ' + d.year + ' 年</span></div>' +
+            '<div class="info-row">&#128268; 桩数：<b>' + d.qty + ' 台</b>&nbsp; &#9889; 功率：<b>' + d.power + ' kW</b></div>' +
+            '</div>'
           );
         });
         map.addOverLay(mk);
@@ -790,34 +1346,68 @@
       map.openInfoWindow(iw);
     }
 
-    // 创建精美圆形图标（带阴影）
-    function mkIcon(color, text, size) {
-      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + (size + 8) + '" height="' + (size + 12) + '" viewBox="0 0 ' + (size + 8) + ' ' + (size + 12) + '">' +
-        '<defs><filter id="s" x="-20%" y="-20%" width="140%" height="140%">' +
-        '<feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-opacity="0.3"/></filter></defs>' +
-        '<ellipse cx="' + ((size + 8) / 2) + '" cy="' + (size + 8) + '" rx="' + (size * 0.25) + '" ry="' + (size * 0.1) + '" fill="rgba(0,0,0,0.15)"/>' +
-        '<circle cx="' + ((size + 8) / 2) + '" cy="' + ((size + 4) / 2) + '" r="' + (size / 2 + 1) + '" fill="' + color + '" stroke="white" stroke-width="2.5" filter="url(#s)"/>' +
-        '<text x="50%" y="' + ((size + 4) / 2) + '" text-anchor="middle" dy=".35em" font-size="' + Math.floor(size * 0.55) + '" fill="white">' + text + '</text></svg>';
-      return new T.Icon({
-        iconUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
-        iconSize: new T.Point(size + 8, size + 12),
-        iconAnchor: new T.Point((size + 8) / 2, (size + 8) / 2)
-      });
-    }
 
     // ===== 控制功能 =====
     function changeMapStyle(style) {
-      if (imageLayer) map.removeLayer(imageLayer);
-      if (vectorLayer) map.removeLayer(vectorLayer);
-      imageLayer = null; vectorLayer = null;
       if (style === 'satellite') {
-        var tk = CFG.tianditu_key;
-        imageLayer = new T.TileLayer('http://t{s}.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&l={z}&tk=' + tk,
-          { minZoom: 1, maxZoom: 18, subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'] });
-        map.addLayer(imageLayer);
-        vectorLayer = new T.TileLayer('http://t{s}.tianditu.gov.cn/DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=' + tk,
-          { minZoom: 1, maxZoom: 18, subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'] });
-        map.addLayer(vectorLayer);
+        map.setMapType(window.TMAP_SATELLITE_MAP); // 仅卫星影像（去除原有汉字注记）
+      } else if (style === 'terrain') {
+        map.setMapType(window.TMAP_TERRAIN_MAP); // 仅地形渲染（去除原有汉字注记）
+      } else {
+        map.setMapType(window.TMAP_NORMAL_MAP);
+        // 注：这里已经配置了全局 CSS 选择器强力阻截 cva 带字贴图渲染，无需再用延时移除图层方法去追赶异步下载
+      }
+
+      // 切换底图后，动态更新对应底图风格的边界和遮罩颜色
+      updateBoundaryStyle(style);
+    }
+
+    function updateBoundaryStyle(style) {
+      if (!maskOverlay || !innerFlattener || !countyGlow || !countyPolygon) return;
+
+      var themeColor = CFG.styles.county_boundary.stroke_color || '#1E3A8A';
+      try {
+        if (style === 'satellite') {
+          // 卫星图模式：外层黑框压暗背景，内层也轻微压黑，边界发出明显的高亮青荧光
+          maskOverlay.setFillColor('#000000');
+          maskOverlay.setFillOpacity(0.55);
+          innerFlattener.setFillColor('#000000');
+          innerFlattener.setFillOpacity(0.15);
+          countyGlow.setColor('#00FFFF');
+          countyGlow.setWeight(10);
+          countyGlow.setOpacity(0.5);
+          countyPolygon.setColor('#FFFFFF');
+          countyPolygon.setWeight(2);
+          if (countyPolygon.setLineStyle) countyPolygon.setLineStyle('solid');
+        } else if (style === 'terrain') {
+          // 地形规划图：外层白框虚化，内层淡青绿压平底图色，边界采用深藏青色虚线+柔光
+          maskOverlay.setFillColor('#ffffff');
+          maskOverlay.setFillOpacity(0.65);
+          if (elevationShadow) { elevationShadow.setFillColor('#000000'); elevationShadow.setFillOpacity(0.15); }
+          innerFlattener.setFillColor('#E0EEE0');
+          innerFlattener.setFillOpacity(0.40);
+          countyGlow.setColor(themeColor);
+          countyGlow.setWeight(12);
+          countyGlow.setOpacity(0.35);
+          countyPolygon.setColor(themeColor);
+          countyPolygon.setWeight(1.5);
+          if (countyPolygon.setLineStyle) countyPolygon.setLineStyle('dashed');
+        } else {
+          // 标准矢量图：外侧白遮，内部全透（不干涉矢量本身颜色），边界用清晰科技蓝
+          maskOverlay.setFillColor('#ffffff');
+          maskOverlay.setFillOpacity(0.70);
+          if (elevationShadow) elevationShadow.setFillOpacity(0.0); // 纯二维图不需要悬浮感
+          innerFlattener.setFillColor('#ffffff');
+          innerFlattener.setFillOpacity(0.0);
+          countyGlow.setColor('#1890ff');
+          countyGlow.setWeight(8);
+          countyGlow.setOpacity(0.3);
+          countyPolygon.setColor('#1890ff');
+          countyPolygon.setWeight(2);
+          if (countyPolygon.setLineStyle) countyPolygon.setLineStyle('solid');
+        }
+      } catch (e) {
+        console.warn('动态更新边界样式时抛出异常', e);
       }
     }
 
@@ -865,10 +1455,16 @@
       if (maskOverlay && countyPolygon) {
         if (show) {
           map.addOverLay(maskOverlay);
+          if (elevationShadow) map.addOverLay(elevationShadow);
+          if (innerFlattener) map.addOverLay(innerFlattener);
+          if (countyGlow) map.addOverLay(countyGlow);
           map.addOverLay(countyPolygon);
           if (countyLabel) map.addOverLay(countyLabel);
         } else {
           map.removeOverLay(maskOverlay);
+          if (elevationShadow) map.removeOverLay(elevationShadow);
+          if (innerFlattener) map.removeOverLay(innerFlattener);
+          if (countyGlow) map.removeOverLay(countyGlow);
           map.removeOverLay(countyPolygon);
           if (countyLabel) map.removeOverLay(countyLabel);
         }
@@ -893,9 +1489,14 @@
       }
     }
 
-    function setMode(mode) {
+    function setMode(btn, mode) {
       document.querySelectorAll('.mode-btn').forEach(function (b) { b.classList.remove('active'); });
-      event.target.closest('.mode-btn').classList.add('active');
+      if (btn && btn.classList) {
+        btn.classList.add('active');
+      } else if (btn && btn.closest) {
+        btn.closest('.mode-btn').classList.add('active');
+      }
+
       var cfg = CFG.modes[mode];
       if (!cfg) return;
       var has = function (n) { return cfg.layers.indexOf(n) >= 0; };
@@ -918,7 +1519,7 @@
       var first = true;
       for (var key in modes) {
         var m = modes[key];
-        html += '<button class="mode-btn' + (first ? ' active' : '') + '" onclick="setMode(\'' + key + '\')">' +
+        html += '<button class="mode-btn' + (first ? ' active' : '') + '" onclick="setMode(this, \'' + key + '\')">' +
           '<span>' + m.icon + '</span>' + m.name + '</button>';
         first = false;
       }
@@ -948,14 +1549,23 @@
     }
 
     function buildLegend(styles) {
+      // 规划图风格图例：简单实心圆
+      function dot(fill, sym) {
+        return '<div style="width:14px;height:14px;border-radius:50%;background:' + fill + ';flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:bold">' + sym + '</div>';
+      }
       var html = '';
-      html += '<div class="legend-item"><div class="legend-icon" style="background:' + styles.station_existing.color + '"></div> ' + styles.station_existing.label + '（精确坐标）</div>';
-      html += '<div class="legend-item"><div class="legend-icon" style="background:' + styles.gas_station.color + '"></div> ' + styles.gas_station.label + '（模拟位置）</div>';
-      html += '<div class="legend-item"><div class="legend-icon" style="background:' + styles.station_planned.color + '"></div> ' + styles.station_planned.label + '（模拟位置）</div>';
+      html += '<div class="legend-item">' + dot('#003399', '★') + ' 现状公共充电站</div>';
+      html += '<div class="legend-item">' + dot('#F59E0B', '★') + ' 规划·公共充电设施</div>';
+      html += '<div class="legend-item">' + dot('#B45309', '◆') + ' 规划·专用充电设施</div>';
+      html += '<div class="legend-item">' + dot('#16A34A', '●') + ' 规划·农村普惠设施</div>';
+      html += '<div class="legend-item">' + dot('#7C3AED', '★') + ' 规划·旅游景区设施</div>';
+      html += '<div class="legend-item">' + dot('#DC2626', '⊕') + ' 综合能源站</div>';
+      html += '<div style="border-top:1px solid #e8ecf0;margin:5px 0"></div>';
       html += '<div class="legend-item"><div style="width:20px;height:3px;background:' + styles.county_boundary.stroke_color + ';flex-shrink:0;border-radius:2px"></div> 县域边界</div>';
-      html += '<div class="legend-item"><div style="width:14px;height:14px;background:rgba(255,255,240,0.6);border:1px solid #ccc;flex-shrink:0;border-radius:2px"></div> 县域范围高亮</div>';
       document.getElementById('legendContent').innerHTML = html;
     }
+
+
 
     function updateStatsPanel(stats, urbanCount, gasCount, plannedCount) {
       var html = '';

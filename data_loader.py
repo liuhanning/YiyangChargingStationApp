@@ -132,7 +132,8 @@ class DataLoader:
         try:
             query = """
                 SELECT station_name, township, scene, quantity,
-                       power_kw, year, equipment, longitude, latitude
+                       power_kw, year, equipment, longitude, latitude,
+                       category, category_code
                 FROM stations_planned
                 WHERE station_name IS NOT NULL
             """
@@ -160,6 +161,8 @@ class DataLoader:
                     "name": row["station_name"],
                     "township": row["township"] if pd.notna(row["township"]) else "",
                     "scene": row["scene"] if pd.notna(row["scene"]) else "",
+                    "category": row["category"] if pd.notna(row["category"]) else "公共充电设施",
+                    "category_code": int(row["category_code"]) if pd.notna(row["category_code"]) else 1,
                     "qty": qty,
                     "power": power,
                     "year": year,

@@ -43,6 +43,10 @@ def get_loader():
 def index():
     return send_from_directory("frontend", "index.html")
 
+@app.route("/dashboard.html")
+def dashboard():
+    return send_from_directory(".", "dashboard.html")
+
 
 # ===== API 路由 =====
 
