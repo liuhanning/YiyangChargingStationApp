@@ -26,7 +26,7 @@ DATABASE = {
 }
 
 
-# ===== 地图API配置 =====
+# ===== 地图 API 配置 =====
 MAP_API = {
     "tianditu": {
         "key": "36c2c7b1a00180d86e97fa8ca2cd3bf2",
@@ -51,7 +51,7 @@ COUNTY_INFO = {
     "center": [117.44, 28.37],  # 县城中心坐标
     "adcode": "361126",  # 行政区划代码
 
-    # 基本情况（2025年）
+    # 基本情况（2025 年）
     "stats": {
         "gdp": 203.94,  # 亿元
         "population": 32.94,  # 万人
@@ -61,103 +61,128 @@ COUNTY_INFO = {
     }
 }
 
+# ===== 万年县基本信息 =====
+COUNTY_INFO_WANNIAN = {
+    "name": "万年县",
+    "province": "江西省",
+    "city": "上饶市",
+    "center": [117.07, 28.69],  # 县城中心坐标
+    "adcode": "361129",  # 行政区划代码
+
+    # 基本情况（待补充）
+    "stats": {
+        "gdp": None,  # 待补充
+        "population": None,
+        "car_total": None,
+        "nev_total": None,
+        "nev_rate": None,
+    }
+}
+
+# ===== 支持的多县列表 =====
+SUPPORTED_COUNTIES = [
+    {"name": "弋阳县", "adcode": "361126", "center": [117.44, 28.37], "key": "yiyang"},
+    {"name": "万年县", "adcode": "361129", "center": [117.07, 28.69], "key": "wannian"},
+]
+
 
 # ===== 县域边界默认坐标 =====
-# 如果API获取失败，使用此默认边界
+# 如果 API 获取失败，使用此默认边界
 COUNTY_BOUNDARY_DEFAULT = [
     [117.25, 28.25], [117.25, 28.50], [117.60, 28.50],
     [117.60, 28.25], [117.25, 28.25]
 ]
 
 
-# ===== 视觉样式配置（浅色主题 - 参考001截图风格）=====
+# ===== 视觉样式配置（政务规划风格 - 参考 demo.png）=====
 STYLE_CONFIG = {
-    # 县域边界样式 - 专业规划深蓝色
+    # 县域边界样式 - 亮紫色行政边界
     "county_boundary": {
-        "stroke_color": "#1E3A8A",  # 深灰蓝/藏青色，更加沉稳专业，适合配合灰绿底图
-        "stroke_width": 4,
+        "stroke_color": "#9333EA",  # 亮紫色，突出行政边界
+        "stroke_width": 3,
         "fill_color": "rgba(0,0,0,0)",
         "fill_opacity": 0.0,
     },
 
-    # 聚光灯遮罩样式 - 柔和灰色
+    # 聚光灯遮罩样式 - 更浅的灰色，保持底图清晰
     "spotlight_mask": {
-        "fill_color": "#8a8a8a",
-        "fill_opacity": 0.35,
+        "fill_color": "#6b7280",
+        "fill_opacity": 0.25,
     },
 
-    # 现有充电站样式
+    # 现有充电站样式 - 红色圆点（政务规划风格）
     "station_existing": {
-        "color": "#2ecc40",
-        "icon": "⚡",
-        "size": 24,
-        "label": "现有充电站",
+        "color": "#DC2626",  # 正红色，醒目
+        "icon": "circle",     # 简洁圆点，非 emoji
+        "size": 10,
+        "label": "现状充电站",
     },
 
-    # 加油站样式
+    # 加油站样式 - 橙色圆点
     "gas_station": {
-        "color": "#e67e22",
-        "icon": "⛽",
-        "size": 22,
+        "color": "#EA580C",
+        "icon": "circle",
+        "size": 9,
         "label": "加油站",
     },
 
-    # 规划充电站样式
+    # 规划充电站样式 - 蓝色圆点
     "station_planned": {
-        "color": "#3498db",
-        "icon": "🔋",
-        "size": 22,
+        "color": "#2563EB",  # 深蓝色
+        "icon": "circle",
+        "size": 10,
         "label": "规划充电站",
     },
 
-    # 新增：现有车站5km服务半径
+    # 新增：现有车站 5km 服务半径
     "radius_existing": {
-        "color": "#2ecc40",
+        "color": "#DC2626",
         "weight": 1,
-        "opacity": 0.5,
-        "fill_color": "#2ecc40",
-        "fill_opacity": 0.15,
-        "label": "5公里服务圈(现有)",
+        "opacity": 0.4,
+        "fill_color": "#DC2626",
+        "fill_opacity": 0.10,
+        "label": "5 公里服务圈 (现状)",
     },
 
-    # 新增：规划车站5km服务半径
+    # 新增：规划车站 5km 服务半径
     "radius_planned": {
-        "color": "#3498db",
+        "color": "#2563EB",
         "weight": 1,
-        "opacity": 0.5,
-        "fill_color": "#3498db",
-        "fill_opacity": 0.15,
+        "opacity": 0.4,
+        "fill_color": "#2563EB",
+        "fill_opacity": 0.10,
         "dashArray": "5, 5",
-        "label": "5公里服务圈(规划)",
+        "label": "5 公里服务圈 (规划)",
     },
 
-    # 标注样式
+    # 标注样式 - 黑体，更正式
     "label": {
-        "fontsize": 13,
-        "color": "#1a3a5c",
-        "background": "transparent",
-        "border": "transparent",
+        "fontsize": 12,
+        "color": "#1f2937",  # 深灰色，更正式
+        "background": "rgba(255,255,255,0.8)",
+        "border": "#d1d5db",
     },
 }
 
 # ===== 乡镇标注坐标 =====
 TOWNSHIP_LABELS = [
-    {"name": "弋江镇", "lng": 117.434, "lat": 28.402},
-    {"name": "南岩镇", "lng": 117.455, "lat": 28.370},
-    {"name": "桃源街道", "lng": 117.458, "lat": 28.420},
-    {"name": "花亭乡", "lng": 117.395, "lat": 28.447},
-    {"name": "圭峰镇", "lng": 117.405, "lat": 28.310},
-    {"name": "叠山镇", "lng": 117.335, "lat": 28.360},
-    {"name": "漆工镇", "lng": 117.350, "lat": 28.460},
-    {"name": "湾里乡", "lng": 117.503, "lat": 28.490},
-    {"name": "葛溪乡", "lng": 117.540, "lat": 28.560},
-    {"name": "中畈乡", "lng": 117.490, "lat": 28.215},
-    {"name": "港口镇", "lng": 117.310, "lat": 28.290},
-    {"name": "清湖乡", "lng": 117.538, "lat": 28.430},
-    {"name": "旭光乡", "lng": 117.310, "lat": 28.530},
-    {"name": "樟树墩镇", "lng": 117.290, "lat": 28.615},
-    {"name": "曹溪镇", "lng": 117.460, "lat": 28.155},
-    {"name": "三县岭镇", "lng": 117.555, "lat": 28.660},
+    {"name": "桃源街道", "lng": 117.4467, "lat": 28.4155},
+    {"name": "曹溪镇", "lng": 117.3075, "lat": 28.7059},
+    {"name": "漆工镇", "lng": 117.5261, "lat": 28.6111},
+    {"name": "樟树墩镇", "lng": 117.4530, "lat": 28.5455},
+    {"name": "南岩镇", "lng": 117.4436, "lat": 28.3419},
+    {"name": "朱坑镇", "lng": 117.5150, "lat": 28.3881},
+    {"name": "圭峰镇", "lng": 117.3426, "lat": 28.2819},
+    {"name": "叠山镇", "lng": 117.4468, "lat": 28.1871},
+    {"name": "港口镇", "lng": 117.3459, "lat": 28.1826},
+    {"name": "弋江镇", "lng": 117.4165, "lat": 28.4047},
+    {"name": "中畈乡", "lng": 117.3490, "lat": 28.5554},
+    {"name": "葛溪乡", "lng": 117.4628, "lat": 28.4782},
+    {"name": "湾里乡", "lng": 117.3825, "lat": 28.4555},
+    {"name": "清湖乡", "lng": 117.3489, "lat": 28.3887},
+    {"name": "旭光乡", "lng": 117.4378, "lat": 28.1933},
+    {"name": "花亭乡", "lng": 117.4229, "lat": 28.4349},
+    {"name": "三县岭乡", "lng": 117.3636, "lat": 28.6510},
 ]
 
 
@@ -178,6 +203,11 @@ EXPORT_CONFIG = {
 
 # ===== 显示模式配置 =====
 DISPLAY_MODES = {
+    "standard": {
+        "name": "标准视图",
+        "icon": "🗺️",
+        "layers": ["boundary"],  # 只显示县域边界和乡镇边界
+    },
     "all": {
         "name": "全部显示",
         "icon": "🗺️",

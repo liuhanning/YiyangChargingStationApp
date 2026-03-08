@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>弋阳县充换电设施规划地图</title>
+  <title>弋阳县/万年县充换电设施规划地图</title>
   <meta name="description" content="弋阳县充换电设施规划动态地图系统，数据实时读取自SQLite数据库">
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
@@ -396,44 +396,12 @@
       color: #1a3a5c
     }
 
-    /* 左下角图例 */
-    /* 左下角图例 */
-    #legend {
-      position: fixed;
-      bottom: 60px;
-      /* 上移以为天地图原生比例尺留出空间 */
-      left: 16px;
-      z-index: 9999;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(8px);
-      border: 1px solid #d0d7de;
-      border-radius: 10px;
-      padding: 10px 14px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-      font-size: 11px;
-      color: #2c3e50;
-    }
-
-    .legend-title {
-      font-weight: 700;
-      font-size: 12px;
-      margin-bottom: 6px;
-      color: #1a3a5c
-    }
-
+    /* 左边栏图例样式项 */
     .legend-item {
       display: flex;
       align-items: center;
       gap: 6px;
       margin: 3px 0
-    }
-
-    .legend-icon {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      border: 2px solid #fff;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2)
     }
 
     /* 数据来源标识 */
@@ -508,6 +476,60 @@
       border-bottom: 24px solid #1a3a5c;
       margin: 0 auto;
     }
+
+    /* 右侧缩放按钮组 */
+    #zoom-controls {
+      position: absolute;
+      top: 72px;
+      /* 指北针 (高约52px) 下方留20px */
+      right: 14px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .zoom-btn {
+      width: 32px;
+      height: 32px;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(180, 200, 220, 0.8);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 300;
+      color: #1a3a5c;
+      line-height: 1;
+      user-select: none;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .zoom-btn:hover {
+      background: rgba(230, 242, 255, 0.98);
+      border-color: #3388cc;
+      box-shadow: 0 3px 12px rgba(51, 136, 204, 0.25);
+      color: #0969da;
+    }
+
+    .zoom-btn:active {
+      transform: scale(0.90);
+      background: rgba(209, 232, 255, 1);
+      box-shadow: 0 1px 4px rgba(51, 136, 204, 0.2);
+    }
+
+    /* 中间细分隔线 */
+    .zoom-divider {
+      width: 22px;
+      height: 1px;
+      background: rgba(180, 200, 220, 0.6);
+      margin: 0 auto;
+    }
   </style>
 </head>
 
@@ -515,8 +537,17 @@
 
   <div id="header">
     <div>
-      <h1>🗺️ 弋阳县充换电设施规划地图</h1>
-      <p class="sub">天地图 · 动态数据 · Flask API</p>
+      <h1>🗺️ 弋阳县/万年县充换电设施规划地图</h1>
+      <p class="sub">天地图 · 动态数据 · 两县联合申报</p>
+    </div>
+    <div class="stats" style="display:flex;align-items:center;gap:12px;margin-right:16px">
+      <label style="font-size:11px;color:#5a8bb5">选择县域：</label>
+      <select id="county-selector" onchange="switchCounty(this.value)"
+        style="padding:4px 8px;border:1px solid #3388cc;border-radius:4px;font-size:11px;background:#fff;color:#1a3a5c;cursor:pointer">
+        <option value="yiyang">弋阳县</option>
+        <option value="wannian">万年县</option>
+        <option value="all">两县联合</option>
+      </select>
     </div>
     <div class="stats" id="headerStats">
       <span class="spinner"
@@ -539,6 +570,13 @@
       <div class="n">N</div>
       <div class="arrow"></div>
     </div>
+
+    <!-- 右侧缩放按钮 -->
+    <div id="zoom-controls">
+      <button class="zoom-btn" id="btn-zoom-in" title="放大" onclick="mapZoomIn()">+</button>
+      <div class="zoom-divider"></div>
+      <button class="zoom-btn" id="btn-zoom-out" title="缩小" onclick="mapZoomOut()">−</button>
+    </div>
   </div>
 
   <!-- 左侧统一侧边栏 -->
@@ -552,9 +590,9 @@
       <div class="sb-body" id="sbMapStyle">
         <select id="mapStyle" onchange="changeMapStyle(this.value)"
           style="width:100%;padding:6px;border:1px solid #d0d7de;border-radius:6px;font-size:12px;background:#fff;color:#2c3e50">
-          <option value="standard">&#x1F5FA; 标准矢量地图</option>
+          <option value="standard" selected>&#x1F5FA; 标准矢量地图</option>
           <option value="satellite">&#x1F6F0; 卫星影像+路网</option>
-          <option value="terrain" selected>&#x26F0; 地形渲染地图</option>
+          <option value="terrain">&#x26F0; 地形渲染地图</option>
         </select>
       </div>
     </div>
@@ -636,12 +674,23 @@
   <script>
     // ===== 全局变量 =====
     var CFG = null;
+    var CURRENT_COUNTY = 'yiyang';  // 当前选择的县
+
+    // 切换县域
+    function switchCounty(county) {
+      CURRENT_COUNTY = county;
+      console.log('切换到：', county);
+
+      // 重新加载数据
+      loadAllData();
+    }
     var map, imageLayer, vectorLayer;
     var layers = { urban: [], gas: [], plan: [], radius_existing: [], radius_planned: [] };
     var maskOverlay = null, countyPolygon = null, countyLabel = null;
     var innerFlattener = null, countyGlow = null, elevationShadow = null;
     var townshipLabels = [];
     var townshipPolygons = [];
+    var unifiedPolygons = [];
     var BOUNDARY = [];
     var TOWNSHIP_DATA = null;
     var allPlannedData = [];   // 全量规划站数据，用于类型筛选
@@ -931,7 +980,15 @@
           addTownshipLabels(CFG.township_labels);
         }
 
-        // 10. 隐藏加载提示
+        // 10. 默认激活"标准视图"模式
+        setTimeout(function () {
+          var standardBtn = document.querySelector('.mode-btn[onclick*="standard"]');
+          if (standardBtn) {
+            setMode(standardBtn, 'standard');
+          }
+        }, 100);
+
+        // 11. 隐藏加载提示
         setTimeout(function () {
           document.getElementById('loading-overlay').classList.add('hide');
         }, 800);
@@ -953,6 +1010,243 @@
       });
     }
 
+    // 重新加载所有数据（支持县域切换）
+    function loadAllData() {
+      console.log('切换县域：', CURRENT_COUNTY);
+      clearAllLayers();
+
+      // 两县联合模式：把两县当作一个整体处理
+      if (CURRENT_COUNTY === 'all') {
+        Promise.all([
+          fetchJSON('/api/boundary/all'),
+          fetchJSON('/api/stations/urban?county=all'),
+          fetchJSON('/api/stations/gas?county=all'),
+          fetchJSON('/api/stations/planned?county=all'),
+          fetchJSON('/api/stats?county=all'),
+          fetchJSON('/api/boundary/townships?county=yiyang'), // 弋阳县乡镇多边形
+          fetchJSON('/api/boundary/townships?county=wannian'), // 万年县乡镇多边形
+          fetchJSON('/api/townships?county=yiyang'),          // 弋阳县乡镇中心点标注
+          fetchJSON('/api/townships?county=wannian')          // 万年县乡镇中心点标注
+        ]).then(function (results) {
+          var boundaries = results[0];
+          var urban = results[1], gas = results[2], planned = results[3];
+          var stats = results[4];
+          var tbYiyang = results[5], tbWannian = results[6];
+          var townshipsYiyang = results[7], townshipsWannian = results[8];
+
+          console.log('✓ 两县联合 边界：弋阳', boundaries.yiyang?.count || 0, '万年', boundaries.wannian?.count || 0, '充电站:', urban.count, gas.count, planned.count);
+          document.getElementById('headerStats').innerHTML = '充电站 <b>' + urban.count + '</b> 加油站 <b>' + gas.count + '</b> 规划 <b>' + planned.count + '</b>';
+          updateStatsPanel(stats, urban.count, gas.count, planned.count);
+
+          // 合并两县边界为 MultiPolygon（作为一个整体）
+          var multiPolygon = [];
+          if (boundaries.yiyang && boundaries.yiyang.boundary) {
+            multiPolygon.push(boundaries.yiyang.boundary);
+          }
+          if (boundaries.wannian && boundaries.wannian.boundary) {
+            multiPolygon.push(boundaries.wannian.boundary);
+          }
+
+          // 统一绘制（把两县当作一个整体）
+          if (multiPolygon.length > 0) {
+            drawUnifiedMultiPolygon(multiPolygon);
+          }
+
+          // 绘制两县的乡镇多边形网格
+          if (tbYiyang && tbYiyang.geojson) drawTownshipBoundaries(tbYiyang.geojson);
+          if (tbWannian && tbWannian.geojson) drawTownshipBoundaries(tbWannian.geojson);
+
+          // 绘制站点（只有弋阳县有数据）
+          if (urban.count > 0) plotUrban(urban.stations);
+          if (gas.count > 0) plotGas(gas.stations);
+          if (planned.count > 0) plotPlan(planned.stations);
+
+          // 绘制两县乡镇标注
+          if (townshipsYiyang && townshipsYiyang.townships) {
+            addTownshipLabels(townshipsYiyang.townships);
+          }
+          if (townshipsWannian && townshipsWannian.townships) {
+            addTownshipLabels(townshipsWannian.townships);
+          }
+
+          // 切换到联合县时，默认激活【标准视图】(standard) 模式（不显示点位，只显示县域）
+          setTimeout(function () {
+            var standardBtn = document.querySelector('.mode-btn[onclick*="standard"]');
+            if (standardBtn) {
+              setMode(standardBtn, 'standard');
+            }
+          }, 100);
+        }).catch(function (err) { console.error('✗', err); });
+
+      } else {
+        // 单县模式
+        Promise.all([
+          fetchJSON('/api/boundary?county=' + CURRENT_COUNTY),
+          fetchJSON('/api/boundary/townships?county=' + CURRENT_COUNTY),  // 加载乡镇边界
+          fetchJSON('/api/stations/urban?county=' + CURRENT_COUNTY),
+          fetchJSON('/api/stations/gas?county=' + CURRENT_COUNTY),
+          fetchJSON('/api/stations/planned?county=' + CURRENT_COUNTY),
+          fetchJSON('/api/stats?county=' + CURRENT_COUNTY),
+          fetchJSON('/api/townships?county=' + CURRENT_COUNTY)
+        ]).then(function (results) {
+          var boundary = results[0], townshipBounds = results[1],
+            urban = results[2], gas = results[3], planned = results[4],
+            stats = results[5], townships = results[6];
+
+          console.log('✓', CURRENT_COUNTY, '边界:', boundary.count, '充电站:', urban.count, gas.count, planned.count);
+          BOUNDARY = boundary.boundary || [];
+          document.getElementById('headerStats').innerHTML = '充电站 <b>' + urban.count + '</b> 加油站 <b>' + gas.count + '</b> 规划 <b>' + planned.count + '</b>';
+          updateStatsPanel(stats, urban.count, gas.count, planned.count);
+          if (BOUNDARY.length > 0) createCountyHighlight(BOUNDARY);
+          if (urban.count > 0) plotUrban(urban.stations);
+          if (gas.count > 0) plotGas(gas.stations);
+          if (planned.count > 0) plotPlan(planned.stations);
+
+          // 绘制乡镇边界（如果有数据）
+          if (townshipBounds && townshipBounds.geojson && townshipBounds.count > 0) {
+            drawTownshipBoundaries(townshipBounds.geojson);
+            console.log('  乡镇边界:', townshipBounds.count, '个');
+          } else {
+            console.log('  乡镇边界：无数据');
+          }
+
+          // 绘制乡镇标注
+          if (townships && townships.townships) {
+            addTownshipLabels(townships.townships);
+            console.log('  乡镇标注:', townships.count, '个');
+          }
+
+          // 切换到单县时，自动激活标准视图模式
+          setTimeout(function () {
+            var standardBtn = document.querySelector('.mode-btn[onclick*="standard"]');
+            if (standardBtn) {
+              setMode(standardBtn, 'standard');
+            }
+          }, 100);
+        }).catch(function (err) {
+          console.error('✗ 加载失败:', err);
+          // 加载失败时尝试只加载标注
+          loadTownshipsOnly();
+        });
+      }
+    }
+
+    // 仅加载乡镇标注（当边界加载失败时）
+    function loadTownshipsOnly() {
+      Promise.all([
+        fetchJSON('/api/townships?county=' + CURRENT_COUNTY)
+      ]).then(function (results) {
+        var townships = results[0];
+        if (townships && townships.townships) {
+          addTownshipLabels(townships.townships);
+        }
+      }).catch(function (err) { console.error('✗ 乡镇标注加载失败:', err); });
+    }
+
+    // 统一绘制 MultiPolygon（把两县当作一个整体）
+    function drawUnifiedMultiPolygon(polygons) {
+      var boundaryStyle = CFG.styles.county_boundary;
+      var themeColor = boundaryStyle.stroke_color || '#9333EA';
+
+      // 转换为 LngLat 数组
+      var polygonList = [];
+      polygons.forEach(function (pts) {
+        polygonList.push(pts.map(function (p) { return new T.LngLat(p[0], p[1]); }));
+      });
+
+      // 外部反向多边形点（用于遮罩）
+      var outer = [[180, 90], [-180, 90], [-180, -90], [180, -90], [180, 90]];
+      var maskPts = outer.map(function (p) { return new T.LngLat(p[0], p[1]); });
+
+      // === 按图层类型分组绘制（确保两县效果一致）===
+
+      // 第 1 层：所有县的内部压平层（底层）- 统一底色
+      polygonList.forEach(function (innerPts) {
+        var p = new T.Polygon(innerPts, {
+          color: 'transparent', weight: 0, opacity: 0,
+          fillColor: '#E0EEE0',
+          fillOpacity: 0.40
+        });
+        map.addOverLay(p);
+        unifiedPolygons.push(p);
+      });
+
+      // 第 2 层：所有县的物理阴影
+      polygonList.forEach(function (innerPts) {
+        var shadowPts = innerPts.map(function (p) {
+          return new T.LngLat(p.lng + 0.008, p.lat - 0.008);
+        });
+        var p = new T.Polygon(shadowPts, {
+          color: 'transparent', weight: 0, opacity: 0,
+          fillColor: '#000000',
+          fillOpacity: 0.15
+        });
+        map.addOverLay(p);
+        unifiedPolygons.push(p);
+      });
+
+      // 第 3 层：所有县的边界发光带
+      polygonList.forEach(function (innerPts) {
+        var p = new T.Polygon(innerPts, {
+          color: themeColor,
+          weight: 12,
+          opacity: 0.35,
+          fillColor: 'transparent',
+          fillOpacity: 0,
+          lineStyle: 'solid'
+        });
+        map.addOverLay(p);
+        unifiedPolygons.push(p);
+      });
+
+      // 第 4 层：所有县的边界顶层细线
+      polygonList.forEach(function (innerPts) {
+        var p = new T.Polygon(innerPts, {
+          color: themeColor,
+          weight: 1.5,
+          opacity: 0.9,
+          fillColor: 'transparent',
+          fillOpacity: 0,
+          lineStyle: 'dashed'
+        });
+        map.addOverLay(p);
+        unifiedPolygons.push(p);
+      });
+
+      // 第 5 层：所有县的外部遮罩（顶层）- 匹配单县的 0.65 的暗度
+      // 必须将所有内孔作为一个数组参入同一个 Polygon，否则互相遮挡
+      var maskAndHoles = [maskPts];
+      polygonList.forEach(function (innerPts) { maskAndHoles.push(innerPts); });
+      var maskP = new T.Polygon(maskAndHoles, {
+        color: 'transparent', weight: 0, opacity: 0,
+        fillColor: '#ffffff',
+        fillOpacity: 0.65
+      });
+      map.addOverLay(maskP);
+      unifiedPolygons.push(maskP);
+
+      // 自适应视图（使用两县整体包围盒）
+      var allBounds = [];
+      polygonList.forEach(function (pts) {
+        pts.forEach(function (p) { allBounds.push(p); });
+      });
+      map.setViewport(allBounds);
+    }
+
+    // 清空图层
+    function clearAllLayers() {
+      ['urban', 'gas', 'plan', 'radius_existing', 'radius_planned'].forEach(function (l) {
+        if (layers[l]) { layers[l].forEach(function (m) { try { map.removeOverLay(m); } catch (e) { } }); layers[l] = []; }
+      });
+      [countyPolygon, maskOverlay, innerFlattener, countyGlow, elevationShadow, countyLabel].forEach(function (o) {
+        if (o) { try { map.removeOverLay(o); } catch (e) { } }
+      });
+      countyPolygon = null; maskOverlay = null; innerFlattener = null; countyGlow = null; elevationShadow = null; countyLabel = null;
+      if (townshipLabels) { townshipLabels.forEach(function (l) { try { map.removeOverLay(l); } catch (e) { } }); townshipLabels = []; }
+      if (townshipPolygons) { townshipPolygons.forEach(function (p) { try { map.removeOverLay(p); } catch (e) { } }); townshipPolygons = []; }
+      if (unifiedPolygons) { unifiedPolygons.forEach(function (p) { try { map.removeOverLay(p); } catch (e) { } }); unifiedPolygons = []; }
+    }
+
     function loadScript(src) {
       return new Promise(function (resolve, reject) {
         var s = document.createElement('script');
@@ -968,8 +1262,8 @@
       map = new T.Map('map');
       map.centerAndZoom(new T.LngLat(CFG.center[0], CFG.center[1]), 11);
 
-      // 默认使用地形图并附带晕渲底图效果
-      changeMapStyle('terrain');
+      // 默认使用标准矢量地图
+      changeMapStyle('standard');
 
       // 增加比例尺控件
       var scale = new T.Control.Scale();
@@ -989,7 +1283,7 @@
 
         if (zoomWheelState.isThrottled) return;
         var now = Date.now();
-        if (now - zoomWheelState.lastTime < 300) return; // 严格限流 300ms 一次放大/缩小
+        if (now - zoomWheelState.lastTime < 600) return; // 严格限流 600ms 一次放大/缩小
 
         zoomWheelState.isThrottled = true;
         zoomWheelState.lastTime = now;
@@ -1000,7 +1294,7 @@
           map.zoomOut();
         }
 
-        setTimeout(function () { zoomWheelState.isThrottled = false; }, 300);
+        setTimeout(function () { zoomWheelState.isThrottled = false; }, 600);
       }, { passive: false, capture: true });
 
       // ===== 随缩放动态调整图标大小 =====
@@ -1011,6 +1305,10 @@
         updateAllMarkerSizes(scale);
       });
     }
+
+    // ===== 右侧缩放按钮 =====
+    function mapZoomIn() { if (map) map.setZoom(map.getZoom() + 0.5); }
+    function mapZoomOut() { if (map) map.setZoom(map.getZoom() - 0.5); }
 
     // 根据缩放系数更新所有 marker 图标大小
     function updateAllMarkerSizes(scale) {
@@ -1046,32 +1344,6 @@
       });
     }
 
-    // 支持自定义尺寸的 GIS 图标生成函数
-    function mkGisIconSized(code, qty, year, W, H) {
-      W = W || 26; H = H || 32;
-      var st = CAT_STYLES[code] || CAT_STYLES[1];
-      var fill = (code === 0 || code === 5) ? st.fill : 'rgba(255,255,255,0.92)';
-      var textColor = (code === 0 || code === 5) ? '#fff' : st.stroke;
-      var fs = Math.round(W * 0.46);
-      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">';
-      svg += '<defs><filter id="sh2"><feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-opacity="0.2"/></filter></defs>';
-      svg += '<polygon points="' + (W / 2 - 4) + ',' + (H - 4) + ' ' + (W / 2 + 4) + ',' + (H - 4) + ' ' + (W / 2) + ',' + H + '" fill="' + st.stroke + '"/>';
-      svg += '<rect x="1" y="1" width="' + (W - 2) + '" height="' + (H - 8) + '" rx="3" ry="3" fill="' + fill + '" stroke="' + st.stroke + '" stroke-width="2"';
-      if (st.dash) svg += ' stroke-dasharray="' + st.dash + '"';
-      svg += ' filter="url(#sh2)"/>';
-      svg += '<text x="50%" y="44%" text-anchor="middle" dy=".35em" font-family="Arial,sans-serif" font-size="' + fs + '" fill="' + textColor + '" font-weight="bold">' + st.sym + '</text>';
-      if (qty > 0 && code >= 1 && code <= 4) {
-        var r = Math.max(5, Math.round(W * 0.24));
-        svg += '<circle cx="' + (W - r) + '" cy="' + r + '" r="' + r + '" fill="' + st.stroke + '"/>';
-        svg += '<text x="' + (W - r) + '" y="' + r + '" text-anchor="middle" dy=".35em" font-size="' + Math.max(5, r - 1) + '" font-family="Arial" fill="#fff">' + qty + '</text>';
-      }
-      if (year && code >= 1 && code <= 4) {
-        var yc = YEAR_COLOR[year] || '#64748B';
-        svg += '<rect x="3" y="' + (H - 10) + '" width="' + (W - 6) + '" height="3" rx="1" fill="' + yc + '"/>';
-      }
-      svg += '</svg>';
-      return new T.Icon({ iconUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg), iconSize: new T.Point(W, H), iconAnchor: new T.Point(W / 2, H) });
-    }
 
 
     // 创建县域内外遮罩与发光边界带
@@ -1326,9 +1598,9 @@
         mk._gisCode = catCode; mk._gisQty = d.qty; mk._gisYear = d.year;
         mk.addEventListener('click', function () {
           openInfo(lng, lat,
-            '<div class="info-window"><div class="info-title" style="color:' + st.stroke + '">' + st.sym + ' ' + d.name + '</div>' +
+            '<div class="info-window"><div class="info-title" style="color:' + st.fill + '">' + st.sym + ' ' + d.name + '</div>' +
             '<div class="info-row">&#127968; 乡镇：<b>' + d.township + '</b></div>' +
-            '<div class="info-row"><span class="badge" style="background:#EFF6FF;color:' + st.stroke + ';border:1px solid ' + st.stroke + '">' + (d.category || '公共充电设施') + '</span>' +
+            '<div class="info-row"><span class="badge" style="background:#EFF6FF;color:' + st.fill + ';border:1px solid ' + st.fill + '">' + (d.category || '公共充电设施') + '</span>' +
             '&nbsp;<span class="badge badge-blue">&#128197; ' + d.year + ' 年</span></div>' +
             '<div class="info-row">&#128268; 桩数：<b>' + d.qty + ' 台</b>&nbsp; &#9889; 功率：<b>' + d.power + ' kW</b></div>' +
             '</div>'
@@ -1452,7 +1724,8 @@
     }
 
     function toggleBoundary(show) {
-      if (maskOverlay && countyPolygon) {
+      // 单县模式：使用原有变量
+      if (CURRENT_COUNTY !== 'all' && maskOverlay && countyPolygon) {
         if (show) {
           map.addOverLay(maskOverlay);
           if (elevationShadow) map.addOverLay(elevationShadow);
@@ -1469,6 +1742,14 @@
           if (countyLabel) map.removeOverLay(countyLabel);
         }
       }
+      // 联合模式：切换统一合并边界显示
+      if (unifiedPolygons && unifiedPolygons.length > 0) {
+        unifiedPolygons.forEach(function (p) {
+          if (show) { try { map.addOverLay(p); } catch (e) { } }
+          else { try { map.removeOverLay(p); } catch (e) { } }
+        });
+      }
+
       // 同时切换乡镇边界和标注
       townshipPolygons.forEach(function (p) {
         if (show) map.addOverLay(p); else map.removeOverLay(p);
@@ -1501,6 +1782,7 @@
       if (!cfg) return;
       var has = function (n) { return cfg.layers.indexOf(n) >= 0; };
 
+      // 根据模式控制所有图层显示状态
       var layerKeys = ['urban', 'gas', 'plan', 'radius_existing', 'radius_planned'];
       layerKeys.forEach(function (l) { toggleLayer(l, has(l)); });
       toggleBoundary(has('boundary'));
@@ -1568,6 +1850,11 @@
 
 
     function updateStatsPanel(stats, urbanCount, gasCount, plannedCount) {
+      // 动态更新面板标题
+      var countyName = CURRENT_COUNTY === 'yiyang' ? '弋阳县' : (CURRENT_COUNTY === 'wannian' ? '万年县' : '弋阳/万年两县');
+      var titleDiv = document.querySelector('#stats-panel .stats-title');
+      if (titleDiv) titleDiv.innerHTML = '&#x1F4CA; ' + countyName + '充电设施概况';
+
       var html = '';
       html += '<div class="stats-row"><div class="stats-dot" style="background:#2ecc40"></div>现有充电站：<span class="stats-val">' + urbanCount + '</span> 座';
       if (stats.existing_stations) html += '（' + stats.existing_stations + '台）';
