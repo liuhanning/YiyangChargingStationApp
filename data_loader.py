@@ -1,6 +1,7 @@
 """
 数据加载模块
 负责从数据库加载充电桩、加油站等数据
+支持弋阳县和万年县
 """
 import sqlite3
 import logging
@@ -8,7 +9,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 import pandas as pd
 
-from config import DATABASE, COUNTY_INFO
+from config import DATABASE, COUNTY_INFO, COUNTY_INFO_WANNIAN, SUPPORTED_COUNTIES
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -17,23 +18,25 @@ logger = logging.getLogger(__name__)
 class DataLoader:
     """数据加载器"""
 
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Optional[Path] = None, county: str = "yiyang"):
         """
         初始化数据加载器
 
         Args:
             db_path: 数据库路径，默认使用配置文件中的路径
+            county: 县名标识，支持 "yiyang"（弋阳）和 "wannian"（万年）
         """
         self.db_path = db_path or DATABASE["path"]
+        self.county = county
         self.conn = None
 
     def connect(self):
         """连接数据库"""
         try:
             self.conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
-            logger.info(f"✓ 连接数据库: {self.db_path}")
+            logger.info(f"✓ 连接数据库：{self.db_path} ({self.county})")
         except Exception as e:
-            logger.error(f"✗ 数据库连接失败: {e}")
+            logger.error(f"✗ 数据库连接失败：{e}")
             raise
 
     def close(self):
@@ -43,12 +46,7 @@ class DataLoader:
             logger.info("✓ 关闭数据库连接")
 
     def load_urban_stations(self) -> List[Dict]:
-        """
-        加载城区现有充电站数据
-
-        Returns:
-            充电站列表，每个元素包含 name, addr, lng, lat
-        """
+        """加载城区现有充电站数据"""
         if not self.conn:
             self.connect()
 
@@ -69,20 +67,15 @@ class DataLoader:
                     "lat": float(row["latitude"]),
                 })
 
-            logger.info(f"✓ 加载城区充电站: {len(stations)} 座")
+            logger.info(f"✓ 加载城区充电站：{len(stations)} 座")
             return stations
 
         except Exception as e:
-            logger.error(f"✗ 加载城区充电站失败: {e}")
+            logger.error(f"✗ 加载城区充电站失败：{e}")
             return []
 
     def load_gas_stations(self) -> List[Dict]:
-        """
-        加载加油站数据
-
-        Returns:
-            加油站列表，每个元素包含 name, addr, has_ev, sales, revenue
-        """
+        """加载加油站数据"""
         if not self.conn:
             self.connect()
 
@@ -112,36 +105,43 @@ class DataLoader:
                     "lat": lat,
                 })
 
-            logger.info(f"✓ 加载加油站: {len(stations)} 座")
+            logger.info(f"✓ 加载加油站：{len(stations)} 座")
             return stations
 
         except Exception as e:
-            logger.error(f"✗ 加载加油站失败: {e}")
+            logger.error(f"✗ 加载加油站失败：{e}")
             return []
 
-    def load_planned_stations(self) -> List[Dict]:
+    def load_planned_stations(self, county_filter: Optional[str] = None) -> List[Dict]:
         """
         加载规划充电站数据
 
-        Returns:
-            规划站列表，每个元素包含 name, township, scene, qty, power, year, equip
+        Args:
+            county_filter: 可选的县过滤条件（'弋阳' 或 '万年'）
         """
         if not self.conn:
             self.connect()
 
         try:
+            # 注意：当前数据库表中没有 county 字段，所有数据都视为弋阳县数据
+            # 未来添加万年县数据时需要添加 county 字段
             query = """
                 SELECT station_name, township, scene, quantity,
                        power_kw, year, equipment, longitude, latitude,
-                       category, category_code
+                       category, category_code, county
                 FROM stations_planned
                 WHERE station_name IS NOT NULL
             """
-            df = pd.read_sql(query, self.conn)
+            
+            # 增加对 county 字段过滤的支持，确保联合视图与单县统计拆分准确
+            if county_filter:
+                query += " AND (county = ?)"
+                df = pd.read_sql(query, self.conn, params=(county_filter,))
+            else:
+                df = pd.read_sql(query, self.conn)
 
             stations = []
             for _, row in df.iterrows():
-                # 安全处理可能的NaN值
                 try:
                     qty = int(row["quantity"]) if pd.notna(row["quantity"]) else 0
                     power = int(row["power_kw"]) if pd.notna(row["power_kw"]) else 0
@@ -169,22 +169,18 @@ class DataLoader:
                     "equip": row["equipment"] if pd.notna(row["equipment"]) else "",
                     "lng": lng,
                     "lat": lat,
+                    "county": row["county"] if "county" in row and pd.notna(row["county"]) else "弋阳",
                 })
 
-            logger.info(f"✓ 加载规划充电站: {len(stations)} 站")
+            logger.info(f"✓ 加载规划充电站：{len(stations)} 站")
             return stations
 
         except Exception as e:
-            logger.error(f"✗ 加载规划充电站失败: {e}")
+            logger.error(f"✗ 加载规划充电站失败：{e}")
             return []
 
-    def load_economic_stats(self) -> pd.DataFrame:
-        """
-        加载经济统计数据
-
-        Returns:
-            经济数据 DataFrame
-        """
+    def load_economic_stats(self, region: str = "弋阳") -> pd.DataFrame:
+        """加载经济统计数据"""
         if not self.conn:
             self.connect()
 
@@ -193,31 +189,26 @@ class DataLoader:
                 SELECT region, year, car_total, car_new, nev_total,
                        nev_new, nev_rate, gdp, fiscal_rev, population
                 FROM economic_stats
-                WHERE region = '弋阳'
+                WHERE region = ?
                 ORDER BY year
             """
-            df = pd.read_sql(query, self.conn)
-            logger.info(f"✓ 加载经济统计数据: {len(df)} 条记录")
+            df = pd.read_sql(query, self.conn, params=(region,))
+            logger.info(f"✓ 加载经济统计数据：{len(df)} 条记录 ({region})")
             return df
 
         except Exception as e:
-            logger.error(f"✗ 加载经济统计数据失败: {e}")
+            logger.error(f"✗ 加载经济统计数据失败：{e}")
             return pd.DataFrame()
 
-    def load_all_data(self) -> Dict:
-        """
-        加载所有数据
-
-        Returns:
-            包含所有数据的字典
-        """
+    def load_all_data(self, county_filter: Optional[str] = None) -> Dict:
+        """加载所有数据"""
         self.connect()
 
         data = {
             "urban_stations": self.load_urban_stations(),
             "gas_stations": self.load_gas_stations(),
-            "planned_stations": self.load_planned_stations(),
-            "economic_stats": self.load_economic_stats(),
+            "planned_stations": self.load_planned_stations(county_filter),
+            "economic_stats": self.load_economic_stats(county_filter) if county_filter else self.load_economic_stats(),
         }
 
         self.close()
@@ -225,13 +216,8 @@ class DataLoader:
         logger.info("✓ 所有数据加载完成")
         return data
 
-    def get_statistics(self) -> Dict:
-        """
-        获取统计摘要
-
-        Returns:
-            统计数据字典
-        """
+    def get_statistics(self, county_filter: Optional[str] = None) -> Dict:
+        """获取统计摘要"""
         if not self.conn:
             self.connect()
 
@@ -247,21 +233,30 @@ class DataLoader:
             cursor.execute("SELECT COUNT(*) FROM gas_stations")
             stats["gas_stations"] = cursor.fetchone()[0]
 
-            # 规划充电站统计
-            cursor.execute("SELECT COUNT(*), SUM(quantity), SUM(power_kw) FROM stations_planned")
+            # 规划充电站统计（支持按县过滤）
+            if county_filter:
+                cursor.execute("""
+                    SELECT COUNT(*), COALESCE(SUM(quantity), 0), COALESCE(SUM(power_kw), 0) 
+                    FROM stations_planned 
+                    WHERE county = ?
+                """, (county_filter,))
+            else:
+                cursor.execute("SELECT COUNT(*), COALESCE(SUM(quantity), 0), COALESCE(SUM(power_kw), 0) FROM stations_planned")
+            
             result = cursor.fetchone()
             stats["planned_stations_count"] = result[0]
-            stats["planned_piles_total"] = result[1] or 0
-            stats["planned_power_total"] = result[2] or 0
+            stats["planned_piles_total"] = result[1]
+            stats["planned_power_total"] = result[2]
 
-            # 最新经济数据
+            # 最新经济数据（支持按县查询）
+            region = "弋阳" if not county_filter else county_filter
             cursor.execute("""
                 SELECT year, nev_total, car_total, gdp, population
                 FROM economic_stats
-                WHERE region = '弋阳'
+                WHERE region = ?
                 ORDER BY year DESC
                 LIMIT 1
-            """)
+            """, (region,))
             result = cursor.fetchone()
             if result:
                 stats["latest_year"] = result[0]
@@ -270,11 +265,11 @@ class DataLoader:
                 stats["gdp"] = result[3]
                 stats["population"] = result[4]
 
-            logger.info("✓ 统计数据获取完成")
+            logger.info(f"✓ 统计数据获取完成 ({county_filter or '全部'})")
             return stats
 
         except Exception as e:
-            logger.error(f"✗ 获取统计数据失败: {e}")
+            logger.error(f"✗ 获取统计数据失败：{e}")
             return {}
 
 
@@ -286,10 +281,10 @@ if __name__ == "__main__":
     data = loader.load_all_data()
 
     print("\n===== 数据加载测试 =====")
-    print(f"城区充电站: {len(data['urban_stations'])} 座")
-    print(f"加油站: {len(data['gas_stations'])} 座")
-    print(f"规划充电站: {len(data['planned_stations'])} 站")
-    print(f"经济数据: {len(data['economic_stats'])} 条记录")
+    print(f"城区充电站：{len(data['urban_stations'])} 座")
+    print(f"加油站：{len(data['gas_stations'])} 座")
+    print(f"规划充电站：{len(data['planned_stations'])} 站")
+    print(f"经济数据：{len(data['economic_stats'])} 条记录")
 
     # 测试统计数据
     loader.connect()
