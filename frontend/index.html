@@ -817,23 +817,6 @@
       </div>
     </div>
 
-    <!-- 自定义规划 -->
-    <div class="sb-section">
-      <div class="sb-header" onclick="toggleSb('sbCustomPlanning')">
-        <span>&#x1F5A8; 自定义规划</span><span class="sb-arrow" id="arrCustomPlanning">&#9660;</span>
-      </div>
-      <div class="sb-body" id="sbCustomPlanning">
-        <button onclick="toggleCustomPlanningMode()"
-          style="width:100%;padding:8px;margin-bottom:6px;background:linear-gradient(135deg,#11998e 0%,#38ef7d 100%);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;" id="btnCustomMode">🔴 开启自定义规划模式</button>
-        <button onclick="clearCustomPoints()"
-          style="width:100%;padding:8px;margin-bottom:6px;background:#e74c3c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;">🗑️ 清空所有自定义点</button>
-        <button onclick="exportCustomPlanning()"
-          style="width:100%;padding:8px;background:#f39c12;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;">📥 导出自定义规划数据</button>
-        <div id="customPointsCount" style="font-size:11px;color:#888;margin-top:6px;">已添加 0 个自定义点</div>
-        <div style="font-size:10px;color:#888;margin-top:4px;">提示：点击地图添加点，再次点击删除</div>
-      </div>
-    </div>
-
     <!-- 导出工具 -->
     <div class="sb-section">
       <div class="sb-header" onclick="toggleSb('sbExport')">
@@ -845,9 +828,7 @@
         <button onclick="exportMapSnapshot('base')"
           style="width:100%;padding:6px;margin-bottom:6px;background:#95a5a6;color:#fff;border:none;border-radius:4px;cursor:pointer;">&#x1F5FA; 仅导出底图与边界</button>
         <button onclick="exportMapSnapshot('points')"
-          style="width:100%;padding:6px;margin-bottom:6px;background:#e67e22;color:#fff;border:none;border-radius:4px;cursor:pointer;">&#x1F4CD; 仅导出覆盖点位</button>
-        <button onclick="exportMapSnapshot('custom')"
-          style="width:100%;padding:6px;background:#8e44ad;color:#fff;border:none;border-radius:4px;cursor:pointer;">&#x1F4A1; 导出包含自定义规划的地图</button>
+          style="width:100%;padding:6px;background:#e67e22;color:#fff;border:none;border-radius:4px;cursor:pointer;">&#x1F4CD; 仅导出覆盖点位</button>
         <div style="font-size:10px;color:#888;margin-top:6px;">提示：分别导出后可在 PPT 中叠加使用</div>
       </div>
     </div>
@@ -1840,6 +1821,7 @@ python generate_wannian_official.py</pre>
         layers.radius_existing.push(circle);
         var mk = new T.Marker(new T.LngLat(d.lng, d.lat), { icon: mkGisIcon(0, 0, null) });
         mk._gisCode = 0; mk._gisQty = 0; mk._gisYear = null;
+        mk._gisName = d.name;
         mk.addEventListener('click', function () {
           openInfo(d.lng, d.lat,
             '<div class="info-window"><div class="info-title" style="color:#003399">&#9889; ' + d.name + '</div>' +
@@ -1861,6 +1843,7 @@ python generate_wannian_official.py</pre>
         // 综合能源站/加油站：实心橙色菱形图标
         var mk = new T.Marker(new T.LngLat(lng, lat), { icon: mkGisIcon(5, 0, null) });
         mk._gisCode = 5; mk._gisQty = 0; mk._gisYear = null;
+        mk._gisName = d.name;
         mk.addEventListener('click', function () {
           openInfo(lng, lat,
             '<div class="info-window"><div class="info-title" style="color:#C2410C">&#9981; ' + d.name + '</div>' +
@@ -1893,6 +1876,7 @@ python generate_wannian_official.py</pre>
         var st = CAT_STYLES[catCode] || CAT_STYLES[1];
         var mk = new T.Marker(new T.LngLat(lng, lat), { icon: mkGisIcon(catCode, d.qty, d.year) });
         mk._gisCode = catCode; mk._gisQty = d.qty; mk._gisYear = d.year;
+        mk._gisName = d.name;
         mk.addEventListener('click', function () {
           openInfo(lng, lat,
             '<div class="info-window"><div class="info-title" style="color:' + st.fill + '">' + st.sym + ' ' + d.name + '</div>' +
@@ -2419,20 +2403,59 @@ python generate_wannian_official.py</pre>
     function collectVisiblePoints() {
       var points = [];
 
-      // 收集自定义规划点
-      if (customPlannedPoints && customPlannedPoints.length > 0) {
-        customPlannedPoints.forEach(function(p) {
-          points.push({
-            name: p.name,
-            lng: p.lng,
-            lat: p.lat,
-            type: 'custom'
-          });
+      // 收集规划站（蓝色点）
+      if (layers.plan && layers.plan.length > 0) {
+        layers.plan.forEach(function(mk) {
+          if (mk._gisCode !== undefined) {
+            var name = mk._gisName || (mk._gisCode === 0 ? '现有站' : '规划站');
+            var coords = getMarkerCoords(mk);
+            if (coords) {
+              points.push({
+                name: name,
+                lng: coords.lng,
+                lat: coords.lat,
+                type: 'planned'
+              });
+            }
+          }
         });
       }
 
-      // 也可以收集地图上已有的规划点（如果需要）
-      // 这里只收集自定义规划点，避免重复
+      // 收集现有站（绿色点）
+      if (layers.urban && layers.urban.length > 0) {
+        layers.urban.forEach(function(mk) {
+          if (mk._gisCode !== undefined) {
+            var name = mk._gisName || '现有站';
+            var coords = getMarkerCoords(mk);
+            if (coords) {
+              points.push({
+                name: name,
+                lng: coords.lng,
+                lat: coords.lat,
+                type: 'urban'
+              });
+            }
+          }
+        });
+      }
+
+      // 收集加油站（棕色点）
+      if (layers.gas && layers.gas.length > 0) {
+        layers.gas.forEach(function(mk) {
+          if (mk._gisCode !== undefined) {
+            var name = mk._gisName || '加油站';
+            var coords = getMarkerCoords(mk);
+            if (coords) {
+              points.push({
+                name: name,
+                lng: coords.lng,
+                lat: coords.lat,
+                type: 'gas'
+              });
+            }
+          }
+        });
+      }
 
       return points;
     }
@@ -2476,6 +2499,23 @@ python generate_wannian_official.py</pre>
       .catch(function(error) {
         alert('❌ 请求失败：\n\n' + error.message);
       });
+    }
+
+    // 获取地图标记的坐标
+    function getMarkerCoords(marker) {
+      try {
+        var position = marker.getPosition();
+        if (position) {
+          return {
+            lng: position.getLng(),
+            lat: position.getLat()
+          };
+        }
+        return null;
+      } catch (e) {
+        console.warn('无法获取标记坐标:', e);
+        return null;
+      }
     }
 
     // 点击外部关闭弹窗
