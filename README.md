@@ -2,7 +2,7 @@
 
 > **项目性质**：江西省上饶市弋阳县、万年县充换电基础设施规划与申报数据整理工作台
 > **工作阶段**：数据整理 → 入库 → 可视化（当前阶段）→ 规划报告编写
-> **最后更新**：2026-03-08
+> **最后更新**：2026-03-09
 > **数据截止**：2025年底（2026年规划数据为申报阶段）
 
 ---
@@ -51,7 +51,13 @@
 │
 ├── dashboard.html             ← 数据统计仪表盘（双击 Chrome 打开）
 ├── map.html                   ← 充电桩地图（需联网，使用天地图 API）
-└── map_styles_preview.html    ← 地图样式对比预览页（已废弃）
+├── map_styles_preview.html    ← 地图样式对比预览页（已废弃）
+├── app.py                     ← Flask 后端应用（提供 API 和 Web 服务）
+├── generate_dynamic_map.py    ← 动态地图生成器（根据前端点位生成规划图）
+├── output_dynamic/            ← 动态生成的地图文件
+│   └── *.png/*.pdf            ← 生成的规划图文件
+├── frontend/
+│   └── index.html             ← 新一代 Web 界面（支持自定义规划点）
 ```
 
 **原始数据目录**（只读，不要修改）
@@ -116,9 +122,45 @@ start chrome dashboard.html
 
 # 地图（需联网，天地图 API）
 start chrome map.html
+
+# 新一代 Web 应用（推荐）
+python app.py
+# 然后访问 http://localhost:5000
 ```
 
-### 4.4 直接查询数据库
+### 4.4 使用自定义规划功能
+```bash
+# 启动 Web 应用
+python app.py
+
+# 访问 http://localhost:5000
+# 在侧边栏"自定义规划"中：
+# 1. 点击"开启自定义规划模式"
+# 2. 在地图上点击添加规划点
+# 3. 点击"按照当前地图点位生成规划图"
+# 生成的地图会保存到 output_dynamic 目录
+```
+
+### 4.5 使用动态地图生成 API
+```python
+import requests
+import json
+
+# 测试 API
+test_points = [
+    {"name": "Test Station 1", "lng": 117.45, "lat": 28.37},
+    {"name": "Test Station 2", "lng": 117.52, "lat": 28.38},
+]
+
+response = requests.post(
+    "http://localhost:5000/api/generate-dynamic-map",
+    json={"points": test_points, "county": "yiyang"}
+)
+
+print(response.json())
+```
+
+### 4.6 直接查询数据库
 ```python
 import sqlite3
 conn = sqlite3.connect(r"C:\Users\lhn\OneDrive\Desktop\江西\弋阳充电桩项目\db\yiyang_ev.db")
@@ -135,7 +177,7 @@ df = pd.read_sql("SELECT * FROM stations_planned", conn)
 - 包含：KPI 卡片、趋势折线图、乡镇分布柱图、场景饼图、GDP 趋势、加油站改造潜力
 - 底部含完整数据表格（规划清单、加油站详情、坐标表）
 
-### map.html（交互地图）
+### map.html（传统交互地图）
 - **需要联网**（天地图 API）
 - 天地图 API Key：`36c2c7b1a00180d86e97fa8ca2cd3bf2`
 - **两县联合支持**：支持弋阳县、万年县单县展示，及两县联合申报一屏全览展示（合并边界）。前端含无缝切换逻辑。
@@ -155,6 +197,16 @@ df = pd.read_sql("SELECT * FROM stations_planned", conn)
   - 🟠 橙色 ⛽ = 加油站（26 座）
   - 🔵 蓝色 🔋 = 2026 规划充电站（34 站）
 - 点击标注可弹窗查看详情
+
+### http://localhost:5000（新一代 Web 应用）
+- **支持自定义规划**：在地图上点击添加规划点
+- **动态地图生成**：按照地图显示的点位生成规划图
+- **高级功能**：
+  - 自定义规划模式（十字准星点击添加）
+  - 实时点位管理（删除、计数）
+  - 数据导出（JSON 格式）
+  - 与数据库实时同步
+- **新界面特点**：侧边栏导航，多层级控制面板
 
 ---
 
@@ -182,9 +234,13 @@ df = pd.read_sql("SELECT * FROM stations_planned", conn)
 | openpyxl | 3.1.5（读取 .xlsx） |
 | xlrd | 2.0.2（读取 .xls） |
 | python-docx | 1.2.0（读取 Word） |
+| Flask | 轻量级 Web 框架 |
+| Flask-CORS | 跨域支持 |
+| matplotlib | 3.x（动态地图生成） |
 | SQLite | 内置，文件型数据库 |
 | ECharts | 5.x CDN（仪表盘图表） |
 | 天地图 API | v4.0（交互地图） |
+| html2canvas | 1.4.1（前端截图） |
 
 ---
 

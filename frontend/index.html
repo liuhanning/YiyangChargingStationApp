@@ -530,6 +530,166 @@
       background: rgba(180, 200, 220, 0.6);
       margin: 0 auto;
     }
+
+    /* 弹窗样式 */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 10000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      animation: fadeIn 0.2s;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0
+      }
+
+      to {
+        opacity: 1
+      }
+    }
+
+    .modal-content {
+      background-color: #fff;
+      margin: 10% auto;
+      padding: 24px;
+      border-radius: 12px;
+      width: 600px;
+      max-width: 90%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: slideIn 0.3s;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateY(-50px);
+        opacity: 0
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1
+      }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #e1e4e8;
+    }
+
+    .modal-header h2 {
+      font-size: 18px;
+      color: #24292f;
+      margin: 0;
+    }
+
+    .close-btn {
+      color: #6e7781;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      line-height: 1;
+      background: #f6f8fa;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      transition: all .2s;
+    }
+
+    .close-btn:hover {
+      color: #24292f;
+      background: #e1e4e8;
+    }
+
+    .modal-body {
+      color: #57606a;
+      line-height: 1.8;
+    }
+
+    .modal-body h3 {
+      color: #24292f;
+      margin: 16px 0 8px 0;
+      font-size: 15px;
+    }
+
+    .modal-body code {
+      background: #f6f8fa;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #cf222e;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 13px;
+    }
+
+    .modal-body pre {
+      background: #161b22;
+      color: #c9d1d9;
+      padding: 14px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 8px 0;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .modal-body ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+
+    .modal-body li {
+      margin: 4px 0;
+    }
+
+    .modal-footer {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid #e1e4e8;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .modal-btn {
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all .2s;
+    }
+
+    .modal-btn-primary {
+      background: #1f6feb;
+      color: #fff;
+    }
+
+    .modal-btn-primary:hover {
+      background: #0d5bd0;
+    }
+
+    .modal-btn-secondary {
+      background: #f6f8fa;
+      color: #24292f;
+      border: 1px solid #d0d7de;
+    }
+
+    .modal-btn-secondary:hover {
+      background: #e1e4e8;
+    }
   </style>
 </head>
 
@@ -639,25 +799,127 @@
       </div>
     </div>
 
-    <!-- 导出工具 (暂时隐藏) -->
-    <div class="sb-section" style="display: none;">
+    <!-- 规划图生成 -->
+    <div class="sb-section">
+      <div class="sb-header" onclick="toggleSb('sbPlanning')">
+        <span>&#x1F4CA; 规划图生成</span><span class="sb-arrow" id="arrPlanning">&#9660;</span>
+      </div>
+      <div class="sb-body" id="sbPlanning">
+        <button onclick="showPlanningModal()"
+          style="width:100%;padding:8px;margin-bottom:6px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;">&#x1F5A8; 生成充电桩规划图</button>
+        <button onclick="showServiceRadiusModal()"
+          style="width:100%;padding:8px;margin-bottom:6px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;">&#x1F3AF; 生成服务半径图</button>
+        <button onclick="generateDynamicMap()"
+          style="width:100%;padding:8px;margin-bottom:6px;background:linear-gradient(135deg,#06b6d4 0%,#3b82f6 100%);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;">&#x2795; 按照当前地图点位生成规划图</button>
+        <button onclick="openOutputFolder()"
+          style="width:100%;padding:8px;background:#34495e;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;">&#x1F4C2; 打开输出文件夹</button>
+        <div style="font-size:11px;color:#888;margin-top:6px;">提示：点击按钮查看详细操作说明</div>
+      </div>
+    </div>
+
+    <!-- 自定义规划 -->
+    <div class="sb-section">
+      <div class="sb-header" onclick="toggleSb('sbCustomPlanning')">
+        <span>&#x1F5A8; 自定义规划</span><span class="sb-arrow" id="arrCustomPlanning">&#9660;</span>
+      </div>
+      <div class="sb-body" id="sbCustomPlanning">
+        <button onclick="toggleCustomPlanningMode()"
+          style="width:100%;padding:8px;margin-bottom:6px;background:linear-gradient(135deg,#11998e 0%,#38ef7d 100%);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;" id="btnCustomMode">🔴 开启自定义规划模式</button>
+        <button onclick="clearCustomPoints()"
+          style="width:100%;padding:8px;margin-bottom:6px;background:#e74c3c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;">🗑️ 清空所有自定义点</button>
+        <button onclick="exportCustomPlanning()"
+          style="width:100%;padding:8px;background:#f39c12;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;">📥 导出自定义规划数据</button>
+        <div id="customPointsCount" style="font-size:11px;color:#888;margin-top:6px;">已添加 0 个自定义点</div>
+        <div style="font-size:10px;color:#888;margin-top:4px;">提示：点击地图添加点，再次点击删除</div>
+      </div>
+    </div>
+
+    <!-- 导出工具 -->
+    <div class="sb-section">
       <div class="sb-header" onclick="toggleSb('sbExport')">
         <span>&#x1F4F8; 导出截图</span><span class="sb-arrow" id="arrExport">&#9660;</span>
       </div>
       <div class="sb-body" id="sbExport">
         <button onclick="exportMapSnapshot('full')"
-          style="width:100%;padding:6px;margin-bottom:6px;background:#3498db;color:#fff;border:none;border-radius:4px;cursor:pointer;">&#x1F5BC;
-          导出完整合成图</button>
+          style="width:100%;padding:6px;margin-bottom:6px;background:#3498db;color:#fff;border:none;border-radius:4px;cursor:pointer;">&#x1F5BC; 导出完整合成图</button>
         <button onclick="exportMapSnapshot('base')"
-          style="width:100%;padding:6px;margin-bottom:6px;background:#95a5a6;color:#fff;border:none;border-radius:4px;cursor:pointer;">&#x1F5FA;
-          仅导出底图与边界</button>
+          style="width:100%;padding:6px;margin-bottom:6px;background:#95a5a6;color:#fff;border:none;border-radius:4px;cursor:pointer;">&#x1F5FA; 仅导出底图与边界</button>
         <button onclick="exportMapSnapshot('points')"
-          style="width:100%;padding:6px;background:#e67e22;color:#fff;border:none;border-radius:4px;cursor:pointer;">&#x1F4CD;
-          仅导出覆盖点位</button>
+          style="width:100%;padding:6px;margin-bottom:6px;background:#e67e22;color:#fff;border:none;border-radius:4px;cursor:pointer;">&#x1F4CD; 仅导出覆盖点位</button>
+        <button onclick="exportMapSnapshot('custom')"
+          style="width:100%;padding:6px;background:#8e44ad;color:#fff;border:none;border-radius:4px;cursor:pointer;">&#x1F4A1; 导出包含自定义规划的地图</button>
         <div style="font-size:10px;color:#888;margin-top:6px;">提示：分别导出后可在 PPT 中叠加使用</div>
       </div>
     </div>
 
+  </div>
+
+  <!-- 规划图生成弹窗 -->
+  <div id="planningModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>&#x1F5A8; 生成充电桩规划图</h2>
+        <span class="close-btn" onclick="closeModal('planningModal')">&times;</span>
+      </div>
+      <div class="modal-body">
+        <p>规划图生成需要运行 Python 脚本，请按照以下步骤操作：</p>
+
+        <h3>&#x1F4CC; 万年县规划图</h3>
+        <pre>cd C:\Users\lhn\OneDrive\Desktop\江西\弋阳充电桩项目
+python generate_wannian_official.py</pre>
+
+        <h3>&#x1F4CC; 输出文件</h3>
+        <ul>
+          <li><code>万年县充电桩规划图.png</code> - 点位图（PNG格式）</li>
+          <li><code>万年县充电桩规划图.pdf</code> - 点位图（PDF矢量格式）</li>
+        </ul>
+
+        <h3>&#x1F3A8; 图例说明</h3>
+        <ul>
+          <li><span style="color:#DC2626">&#x25CF;</span> 红色圆点 - 现有充电站</li>
+          <li><span style="color:#2563EB">&#x25CF;</span> 蓝色圆点 - 规划充电站</li>
+          <li><span style="color:#EA580C">&#x25B2;</span> 橙色三角 - 加油站</li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-secondary" onclick="closeModal('planningModal')">关闭</button>
+        <button class="modal-btn modal-btn-primary" onclick="copyCommand('planning')">&#x1F4CB; 复制命令</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 服务半径图弹窗 -->
+  <div id="serviceRadiusModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>&#x1F3AF; 生成服务半径覆盖图</h2>
+        <span class="close-btn" onclick="closeModal('serviceRadiusModal')">&times;</span>
+      </div>
+      <div class="modal-body">
+        <p>服务半径覆盖图生成需要运行 Python 脚本，请按照以下步骤操作：</p>
+
+        <h3>&#x1F4CC; 万年县服务半径图</h3>
+        <pre>cd C:\Users\lhn\OneDrive\Desktop\江西\弋阳充电桩项目
+python generate_wannian_official.py</pre>
+        <p style="color:#6e7781;font-size:12px">（该脚本会同时生成充电桩规划图和服务半径图）</p>
+
+        <h3>&#x1F4CC; 输出文件</h3>
+        <ul>
+          <li><code>万年县服务半径覆盖图.png</code> - 服务半径图（PNG格式）</li>
+          <li><code>万年县服务半径覆盖图.pdf</code> - 服务半径图（PDF矢量格式）</li>
+        </ul>
+
+        <h3>&#x1F3A8; 图例说明</h3>
+        <ul>
+          <li><span style="color:#DC2626;opacity:0.5">&#x25CF;</span> 红色半透明 - 现有充电站5km服务圈</li>
+          <li><span style="color:#2563EB;opacity:0.5">&#x25CF;</span> 蓝色半透明 - 规划充电站5km服务圈</li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-secondary" onclick="closeModal('serviceRadiusModal')">关闭</button>
+        <button class="modal-btn modal-btn-primary" onclick="copyCommand('service')">&#x1F4CB; 复制命令</button>
+      </div>
+    </div>
   </div>
 
   <!-- 右下角统计 -->
@@ -696,6 +958,11 @@
     var allPlannedData = [];   // 全量规划站数据，用于类型筛选
     var activeCats = null;     // null = 全部显示
 
+    // 自定义规划点相关
+    var customPlannedPoints = [];  // 存储自定义规划点数据
+    var customPlanningMode = false; // 是否处于自定义规划模式
+    var customMarkers = [];        // 存储自定义标记对象
+
     // ===== 导出截图逻辑 =====
     function exportMapSnapshot(mode) {
       // 准备导出前，调整图层可见性
@@ -726,6 +993,21 @@
         if (innerFlattener) map.removeOverLay(innerFlattener);
         if (countyGlow) map.removeOverLay(countyGlow);
         if (countyPolygon) map.removeOverLay(countyPolygon);
+      } else if (mode === 'custom') {
+        // 自定义规划模式：显示自定义点，隐藏其他点
+        // 隐藏其他规划点，只显示自定义点
+        ['urban', 'gas', 'plan'].forEach(function(l) {
+          layers[l].forEach(function(mk) {
+            map.removeOverLay(mk);
+          });
+        });
+        // 确保自定义点可见
+        customMarkers.forEach(function(mk) {
+          if (!mk._added) {
+            map.addOverLay(mk);
+            mk._added = true;
+          }
+        });
       }
 
       // 导出规划图效果：将外部遮罩调成极其浅白，模仿专业规划底图（洗白周边县市图层肌理）
@@ -777,7 +1059,14 @@
       titleDiv.style.textAlign = 'center';
       titleDiv.style.zIndex = '100000';
       titleDiv.style.pointerEvents = 'none';
-      var titleName = mode === 'base' ? '弋阳县行政区划及地形边界轮廓图' : '弋阳县新能源汽车充换电基础设施发展规划（2026年）';
+      var titleName;
+      if (mode === 'base') {
+        titleName = '弋阳县行政区划及地形边界轮廓图';
+      } else if (mode === 'custom') {
+        titleName = '弋阳县新能源汽车充换电基础设施发展规划（自定义规划）';
+      } else {
+        titleName = '弋阳县新能源汽车充换电基础设施发展规划（2026年）';
+      }
       titleDiv.innerHTML = '<h1 style="font-family:\'SimHei\', \'Microsoft YaHei\', sans-serif; font-size: ' + Math.max(26, size * 0.04) + 'px; font-weight: 900; letter-spacing: 3px; color: #111; margin: 0; text-shadow: 2px 2px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 0 8px 12px rgba(0,0,0,0.15);">' + titleName + '</h1>';
 
       var exportBorder = document.createElement('div');
@@ -831,6 +1120,9 @@
             if (innerFlattener) map.addOverLay(innerFlattener);
             if (countyGlow) map.addOverLay(countyGlow);
             if (countyPolygon) map.addOverLay(countyPolygon);
+          } else if (mode === 'custom') {
+            // 恢复其他图层的显示
+            hideMarkers(false);
           }
 
           if (mode !== 'points' && maskOverlay && oldMaskColor) {
@@ -993,6 +1285,9 @@
           document.getElementById('loading-overlay').classList.add('hide');
         }, 800);
 
+        // 12. 恢复之前保存的自定义点
+        restoreCustomPoints();
+
         console.log('✓ 应用启动完成');
 
       } catch (err) {
@@ -1056,7 +1351,7 @@
           if (tbYiyang && tbYiyang.geojson) drawTownshipBoundaries(tbYiyang.geojson);
           if (tbWannian && tbWannian.geojson) drawTownshipBoundaries(tbWannian.geojson);
 
-          // 绘制站点（只有弋阳县有数据）
+          // 绘制站点（弋阳和万年都有数据）
           if (urban.count > 0) plotUrban(urban.stations);
           if (gas.count > 0) plotGas(gas.stations);
           if (planned.count > 0) plotPlan(planned.stations);
@@ -1098,6 +1393,8 @@
           document.getElementById('headerStats').innerHTML = '充电站 <b>' + urban.count + '</b> 加油站 <b>' + gas.count + '</b> 规划 <b>' + planned.count + '</b>';
           updateStatsPanel(stats, urban.count, gas.count, planned.count);
           if (BOUNDARY.length > 0) createCountyHighlight(BOUNDARY);
+          
+          // 根据当前选择的县来决定显示哪些数据
           if (urban.count > 0) plotUrban(urban.stations);
           if (gas.count > 0) plotGas(gas.stations);
           if (planned.count > 0) plotPlan(planned.stations);
@@ -1874,6 +2171,319 @@
 
     // 启动应用
     window.onload = boot;
+
+    // ===== 自定义规划功能 =====
+
+    // 切换自定义规划模式
+    function toggleCustomPlanningMode() {
+      customPlanningMode = !customPlanningMode;
+      var btn = document.getElementById('btnCustomMode');
+      var mapContainer = document.getElementById('map');
+
+      if (customPlanningMode) {
+        btn.innerHTML = '🟢 关闭自定义规划模式';
+        btn.style.background = 'linear-gradient(135deg,#e74c3c 0%,#c0392b 100%)';
+        mapContainer.style.cursor = 'crosshair';
+
+        // 添加地图点击事件
+        map.addEventListener('click', handleMapClick);
+        alert('自定义规划模式已开启！\n\n点击地图任意位置添加规划点，点击已有自定义点可以删除它。');
+      } else {
+        btn.innerHTML = '🔴 开启自定义规划模式';
+        btn.style.background = 'linear-gradient(135deg,#11998e 0%,#38ef7d 100%)';
+        mapContainer.style.cursor = 'grab';
+
+        // 移除地图点击事件
+        map.removeEventListener('click', handleMapClick);
+      }
+    }
+
+    // 处理地图点击事件
+    function handleMapClick(e) {
+      if (!customPlanningMode) return;
+
+      var lng = e.lnglat.getLng();
+      var lat = e.lnglat.getLat();
+
+      // 检查是否点击了已有的自定义点
+      var existingIndex = customPlannedPoints.findIndex(function(p) {
+        return Math.abs(p.lng - lng) < 0.001 && Math.abs(p.lat - lat) < 0.001;
+      });
+
+      if (existingIndex >= 0) {
+        // 删除已有自定义点
+        if (confirm('是否删除该自定义规划点？')) {
+          removeCustomPoint(existingIndex);
+        }
+      } else {
+        // 添加新的自定义点
+        addCustomPoint(lng, lat);
+      }
+    }
+
+    // 添加自定义点
+    function addCustomPoint(lng, lat) {
+      var pointId = Date.now();
+      var pointName = '规划站-' + (customPlannedPoints.length + 1);
+
+      // 创建标记
+      var marker = new T.Marker(new T.LngLat(lng, lat), {
+        icon: createCustomIcon()
+      });
+
+      // 存储点数据
+      var pointData = {
+        id: pointId,
+        name: pointName,
+        lng: lng,
+        lat: lat,
+        marker: marker
+      };
+
+      customPlannedPoints.push(pointData);
+      customMarkers.push(marker);
+
+      // 添加点击事件
+      marker.addEventListener('click', function() {
+        if (customPlanningMode) {
+          var idx = customPlannedPoints.findIndex(function(p) { return p.id === pointId; });
+          if (idx >= 0 && confirm('是否删除该自定义规划点？')) {
+            removeCustomPoint(idx);
+          }
+        } else {
+          // 显示信息窗口
+          openInfo(lng, lat,
+            '<div class="info-window">' +
+            '<div class="info-title" style="color:#9b59b6">📍 ' + pointName + '</div>' +
+            '<div class="info-row">坐标：' + lng.toFixed(6) + ', ' + lat.toFixed(6) + '</div>' +
+            '<div class="info-row"><span class="badge" style="background:#9b59b6;color:#fff">自定义规划点</span></div>' +
+            '</div>'
+          );
+        }
+      });
+
+      map.addOverLay(marker);
+      updateCustomPointsCount();
+
+      console.log('添加自定义点:', pointName, lng, lat);
+    }
+
+    // 删除自定义点
+    function removeCustomPoint(index) {
+      if (index < 0 || index >= customPlannedPoints.length) return;
+
+      var point = customPlannedPoints[index];
+
+      // 移除标记
+      if (point.marker) {
+        map.removeOverLay(point.marker);
+      }
+
+      // 从数组中删除
+      customPlannedPoints.splice(index, 1);
+      customMarkers.splice(index, 1);
+
+      updateCustomPointsCount();
+    }
+
+    // 清空所有自定义点
+    function clearCustomPoints() {
+      if (customPlannedPoints.length === 0) return;
+
+      if (confirm('确定要清空所有自定义规划点吗？')) {
+        // 移除所有标记
+        customMarkers.forEach(function(m) {
+          map.removeOverLay(m);
+        });
+
+        // 清空数组
+        customPlannedPoints = [];
+        customMarkers = [];
+
+        updateCustomPointsCount();
+      }
+    }
+
+    // 更新自定义点计数显示
+    function updateCustomPointsCount() {
+      var el = document.getElementById('customPointsCount');
+      if (el) {
+        el.textContent = '已添加 ' + customPlannedPoints.length + ' 个自定义点';
+      }
+    }
+
+    // 创建自定义点图标
+    function createCustomIcon() {
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="34" viewBox="0 0 28 34">' +
+        '<path d="M14 0C6.268 0 0 6.268 0 14c0 10.5 14 20 14 20s14-9.5 14-20C28 6.268 21.732 0 14 0z" fill="#9b59b6" stroke="#fff" stroke-width="2"/>' +
+        '<circle cx="14" cy="14" r="5" fill="#fff"/>' +
+        '</svg>';
+
+      return new T.Icon({
+        iconUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
+        iconSize: new T.Point(28, 34),
+        iconAnchor: new T.Point(14, 34)
+      });
+    }
+
+    // 导出自定义规划数据
+    function exportCustomPlanning() {
+      if (customPlannedPoints.length === 0) {
+        alert('还没有添加任何自定义规划点！');
+        return;
+      }
+
+      // 准备导出数据
+      var exportData = customPlannedPoints.map(function(p) {
+        return {
+          name: p.name,
+          longitude: p.lng,
+          latitude: p.lat
+        };
+      });
+
+      // 创建JSON下载
+      var jsonStr = JSON.stringify(exportData, null, 2);
+      var blob = new Blob([jsonStr], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'custom_planning_' + new Date().toISOString().slice(0, 10) + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+
+      // 同时也保存到本地存储
+      try {
+        localStorage.setItem('customPlannedPoints', JSON.stringify(exportData));
+      } catch (e) {
+        console.warn('无法保存到localStorage:', e);
+      }
+
+      alert('已导出 ' + customPlannedPoints.length + ' 个自定义规划点！\n\n文件已下载：' + a.download);
+    }
+
+    // 从本地存储恢复自定义点（页面加载时调用）
+    function restoreCustomPoints() {
+      try {
+        var saved = localStorage.getItem('customPlannedPoints');
+        if (saved) {
+          var data = JSON.parse(saved);
+          if (Array.isArray(data) && data.length > 0) {
+            if (confirm('发现之前保存的 ' + data.length + ' 个自定义规划点，是否恢复？')) {
+              data.forEach(function(p) {
+                addCustomPoint(p.longitude, p.latitude);
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('无法恢复自定义点:', e);
+      }
+    }
+
+    // ===== 规划图生成弹窗函数 =====
+    function showPlanningModal() {
+      document.getElementById('planningModal').style.display = 'block';
+    }
+
+    function showServiceRadiusModal() {
+      document.getElementById('serviceRadiusModal').style.display = 'block';
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+    }
+
+    function copyCommand(type) {
+      var cmd = 'cd C:\\Users\\lhn\\OneDrive\\Desktop\\江西\\弋阳充电桩项目\npython generate_wannian_official.py';
+      var temp = document.createElement('textarea');
+      temp.value = cmd;
+      document.body.appendChild(temp);
+      temp.select();
+      try {
+        document.execCommand('copy');
+        alert('\u2713 命令已复制到剪贴板！');
+      } catch (err) {
+        alert('复制失败，请手动复制');
+      }
+      document.body.removeChild(temp);
+    }
+
+    function openOutputFolder() {
+      alert('请在文件资源管理器中打开以下路径：\n\nC:\\Users\\lhn\\OneDrive\\Desktop\\江西\\弋阳充电桩项目\\output_wannian\nC:\\Users\\lhn\\OneDrive\\Desktop\\江西\\弋阳充电桩项目\\output_dynamic');
+    }
+
+    // ========== 动态规划图生成 ==========
+
+    // 收集当前地图上的所有可见点位
+    function collectVisiblePoints() {
+      var points = [];
+
+      // 收集自定义规划点
+      if (customPlannedPoints && customPlannedPoints.length > 0) {
+        customPlannedPoints.forEach(function(p) {
+          points.push({
+            name: p.name,
+            lng: p.lng,
+            lat: p.lat,
+            type: 'custom'
+          });
+        });
+      }
+
+      // 也可以收集地图上已有的规划点（如果需要）
+      // 这里只收集自定义规划点，避免重复
+
+      return points;
+    }
+
+    // 调用后端 API 生成动态规划图
+    function generateDynamicMap() {
+      var points = collectVisiblePoints();
+
+      if (points.length === 0) {
+        alert('当前地图上没有可见的规划点！\n\n请先在自定义规划模式下添加一些规划点，或打开规划充电站图层。');
+        return;
+      }
+
+      if (!confirm('当前地图上共有 ' + points.length + ' 个规划点，确定要生成规划图吗？')) {
+        return;
+      }
+
+      // 显示加载提示
+      var loadingMessage = alert('正在生成规划图，请稍候...\n\n（点击确定后开始生成）');
+
+      fetch('/api/generate-dynamic-map', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          points: points,
+          county: CURRENT_COUNTY || 'yiyang'
+        })
+      })
+      .then(function(response) {
+        return response.json();
+      })
+      .then(function(data) {
+        if (data.success) {
+          alert('✅ 规划图生成成功！\n\n' + data.message + '\n\nPNG文件：' + data.png_file + '\nPDF文件：' + data.pdf_file + '\n\n输出目录：' + data.output_dir);
+        } else {
+          alert('❌ 规划图生成失败：\n\n' + data.error);
+        }
+      })
+      .catch(function(error) {
+        alert('❌ 请求失败：\n\n' + error.message);
+      });
+    }
+
+    // 点击外部关闭弹窗
+    window.onclick = function (event) {
+      if (event.target.classList.contains('modal')) {
+        event.target.style.display = 'none';
+      }
+    }
   </script>
 </body>
 

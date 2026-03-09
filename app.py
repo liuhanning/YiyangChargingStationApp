@@ -237,28 +237,22 @@ def api_township_boundaries():
 
 @app.route("/api/stations/urban")
 def api_urban_stations():
-    """现有充电站（仅弋阳县）"""
+    """现有充电站（支持县别过滤）"""
     county = request.args.get("county", "yiyang")
-    if county == "wannian":
-        # 万年县暂无数据
-        return jsonify({"stations": [], "count": 0, "county": "wannian", "note": "数据收集中"})
     
     loader = get_loader()
-    stations = clean_nan(loader.load_urban_stations())
-    return jsonify({"stations": stations, "count": len(stations)})
+    stations = clean_nan(loader.load_urban_stations(county_filter=county))
+    return jsonify({"stations": stations, "count": len(stations), "county": county})
 
 
 @app.route("/api/stations/gas")
 def api_gas_stations():
-    """加油站（仅弋阳县）"""
+    """加油站（支持县别过滤）"""
     county = request.args.get("county", "yiyang")
-    if county == "wannian":
-        # 万年县暂无数据
-        return jsonify({"stations": [], "count": 0, "county": "wannian", "note": "数据收集中"})
     
     loader = get_loader()
-    stations = clean_nan(loader.load_gas_stations())
-    return jsonify({"stations": stations, "count": len(stations)})
+    stations = clean_nan(loader.load_gas_stations(county_filter=county))
+    return jsonify({"stations": stations, "count": len(stations), "county": county})
 
 
 @app.route("/api/stations/planned")
@@ -356,6 +350,78 @@ def api_townships():
 def api_counties():
     """返回支持的县列表"""
     return jsonify({"counties": SUPPORTED_COUNTIES})
+
+
+@app.route("/api/generate-dynamic-map", methods=["POST"])
+def api_generate_dynamic_map():
+    """
+    根据前端发送的点位数据生成动态规划图
+    点位数据格式：[{"name": "名称", "lng": 经度, "lat": 纬度, "type": "类型"}]
+    """
+    from generate_dynamic_map import draw_dynamic_map
+
+    try:
+        data = request.json
+
+        if not data or "points" not in data:
+            return jsonify({"error": "缺少必要参数", "success": False}), 400
+
+        points = data.get("points", [])
+        county = data.get("county", "yiyang")
+
+        if not points:
+            return jsonify({"error": "点位数据不能为空", "success": False}), 400
+
+        # 生成地图
+        png_path, pdf_path = draw_dynamic_map(points, county)
+
+        if not png_path:
+            return jsonify({"error": "地图生成失败", "success": False}), 500
+
+        return jsonify({
+            "success": True,
+            "message": f"成功生成包含 {len(points)} 个规划点的地图",
+            "png_file": png_path,
+            "pdf_file": pdf_path,
+            "points_count": len(points)
+        })
+
+    except Exception as e:
+        print(f"地图生成失败: {e}")
+        return jsonify({"error": str(e), "success": False}), 500
+
+
+@app.route("/api/dynamic-map/<filename>")
+def api_dynamic_map_file(filename):
+    """获取动态生成的地图文件"""
+    from generate_dynamic_map import OUTPUT_DIR
+
+    file_path = OUTPUT_DIR / filename
+
+    if not file_path.exists():
+        return jsonify({"error": "文件不存在"}), 404
+
+    return send_file(file_path)
+
+
+@app.route("/api/dynamic-map-list")
+def api_dynamic_map_list():
+    """获取动态地图文件列表"""
+    from generate_dynamic_map import OUTPUT_DIR
+
+    files = []
+    for f in OUTPUT_DIR.glob("*.png"):
+        files.append({
+            "filename": f.name,
+            "size": f.stat().st_size,
+            "created": f.stat().st_mtime,
+            "url": f"/api/dynamic-map/{f.name}"
+        })
+
+    return jsonify({
+        "files": sorted(files, key=lambda x: x["created"], reverse=True),
+        "count": len(files)
+    })
 
 
 if __name__ == "__main__":

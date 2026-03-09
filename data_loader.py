@@ -45,27 +45,86 @@ class DataLoader:
             self.conn.close()
             logger.info("✓ 关闭数据库连接")
 
-    def load_urban_stations(self) -> List[Dict]:
+    def load_urban_stations(self, county_filter: Optional[str] = None) -> List[Dict]:
         """加载城区现有充电站数据"""
         if not self.conn:
             self.connect()
 
         try:
-            query = """
-                SELECT station_name, address, longitude, latitude
-                FROM stations_urban_coords
-                WHERE longitude IS NOT NULL AND latitude IS NOT NULL
-            """
-            df = pd.read_sql(query, self.conn)
+            # 根据县别过滤数据
+            if county_filter == "wannian":
+                # 万年县现有充电站数据
+                query = """
+                    SELECT township, location, quantity, longitude, latitude
+                    FROM stations_existing_township
+                    WHERE township IN ('陈营', '梓埠', '石镇', '湖云', '齐埠', '汪家', '青云', '苏桥', '上坊', '裴梅', '大源', '珠田')
+                      AND longitude IS NOT NULL AND latitude IS NOT NULL
+                """
+                df = pd.read_sql(query, self.conn)
 
-            stations = []
-            for _, row in df.iterrows():
-                stations.append({
-                    "name": row["station_name"],
-                    "addr": row["address"] or "",
-                    "lng": float(row["longitude"]),
-                    "lat": float(row["latitude"]),
-                })
+                stations = []
+                for _, row in df.iterrows():
+                    # 组合站点名称
+                    name = f"{row['township']}{row['location']}"
+                    stations.append({
+                        "name": name,
+                        "addr": f"{row['township']}{row['location']}",
+                        "lng": float(row["longitude"]),
+                        "lat": float(row["latitude"]),
+                    })
+            elif county_filter == "yiyang":
+                # 弋阳县现有充电站数据
+                query = """
+                    SELECT station_name, address, longitude, latitude
+                    FROM stations_urban_coords
+                    WHERE county = '弋阳' AND longitude IS NOT NULL AND latitude IS NOT NULL
+                """
+                df = pd.read_sql(query, self.conn)
+
+                stations = []
+                for _, row in df.iterrows():
+                    stations.append({
+                        "name": row["station_name"],
+                        "addr": row["address"] or "",
+                        "lng": float(row["longitude"]),
+                        "lat": float(row["latitude"]),
+                    })
+            else:
+                # 联合视图：加载弋阳县和万年县的所有数据
+                # 先加载弋阳县数据
+                query1 = """
+                    SELECT station_name, address, longitude, latitude
+                    FROM stations_urban_coords
+                    WHERE county = '弋阳' AND longitude IS NOT NULL AND latitude IS NOT NULL
+                """
+                df1 = pd.read_sql(query1, self.conn)
+                
+                stations = []
+                for _, row in df1.iterrows():
+                    stations.append({
+                        "name": row["station_name"],
+                        "addr": row["address"] or "",
+                        "lng": float(row["longitude"]),
+                        "lat": float(row["latitude"]),
+                    })
+                
+                # 再加载万年县数据
+                query2 = """
+                    SELECT township, location, quantity, longitude, latitude
+                    FROM stations_existing_township
+                    WHERE township IN ('陈营', '梓埠', '石镇', '湖云', '齐埠', '汪家', '青云', '苏桥', '上坊', '裴梅', '大源', '珠田')
+                      AND longitude IS NOT NULL AND latitude IS NOT NULL
+                """
+                df2 = pd.read_sql(query2, self.conn)
+                
+                for _, row in df2.iterrows():
+                    name = f"{row['township']}{row['location']}"
+                    stations.append({
+                        "name": name,
+                        "addr": f"{row['township']}{row['location']}",
+                        "lng": float(row["longitude"]),
+                        "lat": float(row["latitude"]),
+                    })
 
             logger.info(f"✓ 加载城区充电站：{len(stations)} 座")
             return stations
@@ -74,18 +133,39 @@ class DataLoader:
             logger.error(f"✗ 加载城区充电站失败：{e}")
             return []
 
-    def load_gas_stations(self) -> List[Dict]:
+    def load_gas_stations(self, county_filter: Optional[str] = None) -> List[Dict]:
         """加载加油站数据"""
         if not self.conn:
             self.connect()
 
         try:
-            query = """
-                SELECT station_name, address, has_ev_charger,
-                       total_sales, oil_revenue, longitude, latitude
-                FROM gas_stations
-            """
-            df = pd.read_sql(query, self.conn)
+            # 根据县别过滤数据
+            if county_filter == "wannian":
+                # 万年县加油站数据
+                query = """
+                    SELECT station_name, address, has_ev_charger,
+                           total_sales, oil_revenue, longitude, latitude
+                    FROM gas_stations
+                    WHERE county = '万年' AND longitude IS NOT NULL AND latitude IS NOT NULL
+                """
+                df = pd.read_sql(query, self.conn)
+            elif county_filter == "yiyang":
+                # 弋阳县加油站数据
+                query = """
+                    SELECT station_name, address, has_ev_charger,
+                           total_sales, oil_revenue, longitude, latitude
+                    FROM gas_stations
+                    WHERE county IS NULL OR county != '万年'
+                """
+                df = pd.read_sql(query, self.conn)
+            else:
+                # 联合视图：加载弋阳县和万年县的所有数据
+                query = """
+                    SELECT station_name, address, has_ev_charger,
+                           total_sales, oil_revenue, longitude, latitude, county
+                    FROM gas_stations
+                """
+                df = pd.read_sql(query, self.conn)
 
             stations = []
             for _, row in df.iterrows():
@@ -95,12 +175,17 @@ class DataLoader:
                 except:
                     lng, lat = None, None
 
+                # 判断是否有EV充电设施
+                has_ev = False
+                if "has_ev_charger" in row:
+                    has_ev = row["has_ev_charger"] in ("√", "✓", "是", "有")
+
                 stations.append({
                     "name": row["station_name"],
                     "addr": row["address"] or "",
-                    "has_ev": row["has_ev_charger"] in ("√", "✓", "是", "有"),
-                    "sales": float(row["total_sales"]) if row["total_sales"] else 0,
-                    "revenue": float(row["oil_revenue"]) if row["oil_revenue"] else 0,
+                    "has_ev": has_ev,
+                    "sales": float(row["total_sales"]) if pd.notna(row["total_sales"]) else 0,
+                    "revenue": float(row["oil_revenue"]) if pd.notna(row["oil_revenue"]) else 0,
                     "lng": lng,
                     "lat": lat,
                 })
