@@ -79,10 +79,50 @@ COUNTY_INFO_WANNIAN = {
     }
 }
 
+# ===== 县基本信息统一管理字典 =====
+# 格式：{"县 key": COUNTY_INFO_XXX}
+ALL_COUNTY_INFO = {
+    "yiyang": COUNTY_INFO,
+    "wannian": COUNTY_INFO_WANNIAN,
+    # 新增县时在此添加：
+    # "jian": COUNTY_INFO_JIAN,
+    # "suichuan": COUNTY_INFO_SUICHUAN,
+    # "xianxian": COUNTY_INFO_XXIAN,
+}
+
+# ===== 新增县配置模板 =====
+# 复制以下模板配置新县：
+"""
+# ===== XX 县基本信息 =====
+COUNTY_INFO_XXIAN = {
+    "name": "XX 县",
+    "province": "XX 省",
+    "city": "XX 市",
+    "center": [经度，纬度],  # 县城中心坐标
+    "adcode": "XXXXXX",  # 行政区划代码
+
+    # 基本情况
+    "stats": {
+        "gdp": None,  # 亿元
+        "population": None,  # 万人
+        "car_total": None,  # 万辆
+        "nev_total": None,  # 万辆
+        "nev_rate": None,  # %
+    }
+}
+
+# 然后在 ALL_COUNTY_INFO 中添加：
+# "xianxian": COUNTY_INFO_XXIAN,
+"""
+
 # ===== 支持的多县列表 =====
 SUPPORTED_COUNTIES = [
-    {"name": "弋阳县", "adcode": "361126", "center": [117.44, 28.37], "key": "yiyang"},
-    {"name": "万年县", "adcode": "361129", "center": [117.07, 28.69], "key": "wannian"},
+    {"name": "弋阳县", "adcode": "361126", "center": [117.44, 28.37],  "key": "yiyang"},
+    {"name": "万年县", "adcode": "361129", "center": [117.07, 28.69],  "key": "wannian"},
+    {"name": "吉安县", "adcode": "360821", "center": [114.905, 27.040], "key": "jian"},
+    {"name": "遂川县", "adcode": "360827", "center": [114.517, 26.324], "key": "suichuan"},
+    # 新增县配置模板（复制此行修改）：
+    # {"name": "XX 县", "adcode": "XXXXXX", "center": [经度，纬度], "key": "xianxian"},
 ]
 
 
@@ -165,6 +205,7 @@ STYLE_CONFIG = {
 }
 
 # ===== 乡镇标注坐标 =====
+# 弋阳县乡镇标注
 TOWNSHIP_LABELS = [
     {"name": "桃源街道", "lng": 117.4467, "lat": 28.4155},
     {"name": "曹溪镇", "lng": 117.3075, "lat": 28.7059},
@@ -185,6 +226,44 @@ TOWNSHIP_LABELS = [
     {"name": "三县岭乡", "lng": 117.3636, "lat": 28.6510},
 ]
 
+# ===== 其他县乡镇标注配置 =====
+# 万年县乡镇标注
+TOWNSHIP_LABELS_WANNIAN = [
+    {"name": "陈营镇", "lng": 117.0794, "lat": 28.7081},
+    {"name": "石镇镇", "lng": 116.9691, "lat": 28.8016},
+    {"name": "梓埠镇", "lng": 116.8857, "lat": 28.8396},
+    {"name": "裴梅镇", "lng": 117.1582, "lat": 28.6286},
+    {"name": "青云镇", "lng": 116.9248, "lat": 28.6484},
+    {"name": "汪家乡", "lng": 116.9660, "lat": 28.7300},
+    {"name": "湖云乡", "lng": 116.8448, "lat": 28.7801},
+    {"name": "齐埠乡", "lng": 116.8687, "lat": 28.6933},
+    {"name": "苏桥乡", "lng": 116.9597, "lat": 28.5686},
+    {"name": "大源镇", "lng": 117.1815, "lat": 28.7261},
+    {"name": "上坊乡", "lng": 117.0249, "lat": 28.6444},
+    {"name": "珠田乡", "lng": 117.0787, "lat": 28.7756},
+]
+
+# 吉安县乡镇标注（示例，需补充实际数据）
+TOWNSHIP_LABELS_JIAN = [
+    # {"name": "XX 镇", "lng": 114.XX, "lat": 27.XX},
+]
+
+# 遂川县乡镇标注（示例，需补充实际数据）
+TOWNSHIP_LABELS_SUICHUAN = [
+    # {"name": "XX 镇", "lng": 114.XX, "lat": 26.XX},
+]
+
+# ===== 乡镇标注统一管理字典 =====
+# 格式：{"县 key": TOWNSHIP_LABELS_XXX}
+ALL_TOWNSHIP_LABELS = {
+    "yiyang": TOWNSHIP_LABELS,
+    "wannian": TOWNSHIP_LABELS_WANNIAN,
+    "jian": TOWNSHIP_LABELS_JIAN,
+    "suichuan": TOWNSHIP_LABELS_SUICHUAN,
+    # 新增县时在此添加：
+    # "xianxian": TOWNSHIP_LABELS_XXIAN,
+}
+
 
 # ===== 地图导出配置 =====
 EXPORT_CONFIG = {
@@ -201,6 +280,32 @@ EXPORT_CONFIG = {
 }
 
 
+# ===== 地图配准配置（控制点校准）=====
+# 控制点（GCP - Ground Control Points）：[(底图x, 底图y, 经度, 纬度), ...]
+# 用于精确配准底图和地图坐标
+MAP_CALIBRATION = {
+    "yiyang": {
+        "gcps": [
+            (1650, 2000, 117.4165, 28.4047),  # 弋江镇
+            (1000, 300, 117.3075, 28.7059),  # 曹溪镇
+            (2300, 2100, 117.515, 28.3881),  # 朱坑镇
+        ],
+        "transform_type": "affine",  # 变换类型：affine 或 poly
+        "enabled": True,  # 启用控制点配准
+    },
+    "wannian": {
+        "gcps": [
+            (1843, 1033, 117.0794, 28.7081),  # 陈营镇
+            (1439, 556, 116.9691, 28.8016),   # 石镇镇
+            (2174, 1472, 117.1582, 28.6286),  # 裴梅镇
+            (1301, 1700, 117.1815, 28.7261),  # 大源镇
+            (1301, 1697, 116.9597, 28.5686),  # 苏桥乡
+        ],
+        "transform_type": "affine",
+        "enabled": True,
+    }
+}
+
 # ===== 显示模式配置 =====
 DISPLAY_MODES = {
     "standard": {
@@ -211,7 +316,7 @@ DISPLAY_MODES = {
     "all": {
         "name": "全部显示",
         "icon": "🗺️",
-        "layers": ["urban", "gas", "plan", "boundary", "radius_existing", "radius_planned"],
+        "layers": ["urban", "gas", "plan", "boundary"],
     },
     "boundary": {
         "name": "仅县域边界",
@@ -221,12 +326,12 @@ DISPLAY_MODES = {
     "current": {
         "name": "现状分析",
         "icon": "⚡",
-        "layers": ["urban", "boundary", "radius_existing"],
+        "layers": ["urban", "boundary"],
     },
     "planning": {
         "name": "规划视图",
         "icon": "🔋",
-        "layers": ["plan", "boundary", "radius_planned"],
+        "layers": ["plan", "boundary"],
     },
     "gas": {
         "name": "加油站分布",

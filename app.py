@@ -1,6 +1,6 @@
 """
 弋阳县/万年县充换电设施规划 - Flask 后端
-支持两县联合申报
+支持多县联合申报
 """
 import json
 import math
@@ -10,9 +10,10 @@ from flask import Flask, jsonify, send_from_directory, request, send_file
 from flask_cors import CORS
 from data_loader import DataLoader
 from config import (
-    DATABASE, MAP_API, COUNTY_INFO, COUNTY_INFO_WANNIAN, 
-    SUPPORTED_COUNTIES, STYLE_CONFIG, DISPLAY_MODES, 
-    STATS_CONFIG, DATA_DIR, TOWNSHIP_LABELS
+    DATABASE, MAP_API, COUNTY_INFO, COUNTY_INFO_WANNIAN,
+    SUPPORTED_COUNTIES, STYLE_CONFIG, DISPLAY_MODES,
+    STATS_CONFIG, DATA_DIR, TOWNSHIP_LABELS,
+    ALL_COUNTY_INFO, ALL_TOWNSHIP_LABELS,
 )
 
 app = Flask(__name__, static_folder="frontend", static_url_path="")
@@ -100,94 +101,66 @@ def api_config():
 def api_boundary():
     """
     返回县域边界坐标
-    支持参数：county=yiyang 或 county=wannian
+    支持参数：county=<county_key>
     """
     county = request.args.get("county", "yiyang")
-    
-    if county == "wannian":
-        # 万年县边界
-        geojson_file = DATA_DIR / "wannian_county.geojson"
-        if geojson_file.exists():
-            try:
-                with open(geojson_file, "r", encoding="utf-8") as f:
-                    geojson = json.load(f)
-                geom = geojson["features"][0]["geometry"]
-                
-                # 处理 MultiPolygon：合并所有多边形的外环
-                if geom["type"] == "MultiPolygon":
-                    all_coords = []
-                    for polygon in geom["coordinates"]:
-                        # 每个 polygon[0] 是外环
-                        outer_ring = polygon[0]
-                        all_coords.extend(outer_ring)
-                    coords = all_coords
-                elif geom["type"] == "Polygon":
-                    coords = geom["coordinates"][0]  # 外层环
-                else:
-                    coords = []
-                    
-                props = geojson["features"][0]["properties"]
-                return jsonify({
-                    "boundary": coords,
-                    "count": len(coords),
-                    "source": "GeoJSON",
-                    "center": props.get("center"),
-                    "name": props.get("name"),
-                    "geojson": geojson,
-                    "county": "wannian",
-                })
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).warning(f"万年县边界加载失败：{e}")
-                pass
-        
-        # 回退到简化版
-        boundary_file = DATA_DIR / "wannian_boundary.json"
-        if boundary_file.exists():
-            try:
-                with open(boundary_file, "r", encoding="utf-8") as f:
-                    boundary = json.load(f)
-                return jsonify({
-                    "boundary": boundary, 
-                    "count": len(boundary), 
-                    "source": "manual",
-                    "county": "wannian",
-                })
-            except Exception:
-                pass
-        
-        return jsonify({"boundary": [], "count": 0, "error": "万年县边界数据加载失败", "county": "wannian"}), 500
-    
-    else:
-        # 弋阳县边界
-        geojson_file = DATA_DIR / "yiyang_county.geojson"
-        if geojson_file.exists():
-            try:
-                with open(geojson_file, "r", encoding="utf-8") as f:
-                    geojson = json.load(f)
-                coords = geojson["features"][0]["geometry"]["coordinates"][0][0]
-                props = geojson["features"][0]["properties"]
-                return jsonify({
-                    "boundary": coords,
-                    "count": len(coords),
-                    "source": "DataV GeoAtlas",
-                    "center": props.get("center"),
-                    "name": props.get("name"),
-                    "geojson": geojson,
-                    "county": "yiyang",
-                })
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).warning(f"无法读取高精度边界 GeoJSON (弋阳县)：{e}，将尝试回退方案")
-                pass
 
-        boundary_file = DATA_DIR / "yiyang_boundary.json"
+    # 通用边界加载逻辑：data/{county}_county.geojson
+    geojson_file = DATA_DIR / f"{county}_county.geojson"
+
+    if geojson_file.exists():
+        try:
+            with open(geojson_file, "r", encoding="utf-8") as f:
+                geojson = json.load(f)
+            geom = geojson["features"][0]["geometry"]
+
+            # 处理 MultiPolygon：合并所有多边形的外环
+            if geom["type"] == "MultiPolygon":
+                all_coords = []
+                for polygon in geom["coordinates"]:
+                    outer_ring = polygon[0]
+                    all_coords.extend(outer_ring)
+                coords = all_coords
+            elif geom["type"] == "Polygon":
+                coords = geom["coordinates"][0]  # 外层环
+            else:
+                coords = []
+
+            props = geojson["features"][0]["properties"]
+            return jsonify({
+                "boundary": coords,
+                "count": len(coords),
+                "source": "GeoJSON",
+                "center": props.get("center"),
+                "name": props.get("name"),
+                "geojson": geojson,
+                "county": county,
+            })
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"{county}县边界加载失败：{e}")
+
+    # 回退到简化版边界文件：data/{county}_boundary.json
+    boundary_file = DATA_DIR / f"{county}_boundary.json"
+    if boundary_file.exists():
         try:
             with open(boundary_file, "r", encoding="utf-8") as f:
                 boundary = json.load(f)
-            return jsonify({"boundary": boundary, "count": len(boundary), "source": "manual", "county": "yiyang"})
+            return jsonify({
+                "boundary": boundary,
+                "count": len(boundary),
+                "source": "manual",
+                "county": county,
+            })
         except Exception:
-            return jsonify({"boundary": [], "count": 0, "error": "弋阳县边界数据加载失败", "county": "yiyang"}), 500
+            pass
+
+    return jsonify({
+        "boundary": [],
+        "count": 0,
+        "error": f"{county}县边界数据加载失败",
+        "county": county
+    }), 500
 
 
 @route("/api/boundary/all")
@@ -223,10 +196,8 @@ def api_township_boundaries():
     """返回乡镇边界 GeoJSON（支持按县过滤）"""
     county = request.args.get("county", "yiyang")
 
-    if county == "wannian":
-        geojson_file = DATA_DIR / "wannian_townships.geojson"
-    else:
-        geojson_file = DATA_DIR / "yiyang_townships.geojson"
+    # 通用乡镇边界加载逻辑：data/{county}_townships.geojson
+    geojson_file = DATA_DIR / f"{county}_townships.geojson"
 
     try:
         with open(geojson_file, "r", encoding="utf-8") as f:
@@ -237,14 +208,14 @@ def api_township_boundaries():
             props = feat.get("properties", {})
             name = props.get("DistName") or props.get("NAME") or props.get("name", "")
             geom = feat.get("geometry", {})
-            
+
             # 处理 Point 类型（如南溪乡只有中心点）
             if geom.get("type") == "Point":
                 coords = geom.get("coordinates", [])
                 if coords and len(coords) >= 2:
                     townships.append({"name": name, "lng": round(coords[0], 4), "lat": round(coords[1], 4)})
                 continue
-            
+
             # 处理 Polygon/MultiPolygon 类型
             coords = geom.get("coordinates", [])
             if geom.get("type") == "MultiPolygon" and coords:
@@ -253,12 +224,12 @@ def api_township_boundaries():
                 ring = coords[0]
             else:
                 ring = []
-            
+
             if ring and len(ring) > 0:
                 clng = sum(p[0] for p in ring) / len(ring)
                 clat = sum(p[1] for p in ring) / len(ring)
                 townships.append({"name": name, "lng": round(clng, 4), "lat": round(clat, 4)})
-        
+
         return jsonify({
             "geojson": geojson,
             "count": count,
@@ -267,7 +238,12 @@ def api_township_boundaries():
             "county": county,
         })
     except Exception as e:
-        return jsonify({"error": f"乡镇边界数据加载失败：{e}", "count": 0, "county": county}), 500
+        return jsonify({
+            "error": f"乡镇边界数据加载失败：{e}",
+            "count": 0,
+            "county": county,
+            "note": f"请准备 {county}_townships.geojson 文件"
+        }), 500
 
 
 @route("/api/stations/urban")
@@ -294,18 +270,19 @@ def api_gas_stations():
 def api_planned_stations():
     """
     规划充电站
-    支持参数：county=yiyang 或 county=wannian 或 county=all
+    支持参数：county=<county_key> 或 county=all
     """
     county = request.args.get("county", "yiyang")
 
-    if county == "wannian":
-        # 万年县暂无数据
-        return jsonify({"stations": [], "count": 0, "county": "wannian", "note": "数据收集中"})
-
     loader = get_loader()
 
-    # 区分单县还是联合视图 (all)
-    filter_val = None if county == "all" else "弋阳" if county == "yiyang" else county
+    # 联合视图 (all) 或单县视图
+    if county == "all":
+        filter_val = None  # 不过滤，返回所有县数据
+    else:
+        # 从 SUPPORTED_COUNTIES 中获取县名映射
+        county_name_map = {c["key"]: c["name"] for c in SUPPORTED_COUNTIES}
+        filter_val = county_name_map.get(county, county)
 
     stations = loader.load_planned_stations(county_filter=filter_val)
     stations = clean_nan(stations)
@@ -479,22 +456,10 @@ def api_planned_stations_batch_update():
 def api_stats():
     """
     统计摘要
-    支持参数：county=yiyang 或 county=wannian 或 county=all
+    支持参数：county=<county_key> 或 county=all
     """
     county = request.args.get("county", "yiyang")
-    
-    if county == "wannian":
-        # 万年县暂无数据
-        return jsonify({
-            "county": "wannian",
-            "existing_stations": 0,
-            "gas_stations": 0,
-            "planned_stations_count": 0,
-            "planned_piles_total": 0,
-            "planned_power_total": 0,
-            "note": "数据收集中"
-        })
-    
+
     loader = get_loader()
     stats = loader.get_statistics()
     stats = clean_nan(stats)
@@ -519,12 +484,25 @@ def api_economic():
 
 @route("/api/townships")
 def api_townships():
-    """返回乡镇标注数据"""
+    """返回乡镇标注数据（支持多县）"""
     county = request.args.get("county", "yiyang")
-    
-    # 根据县返回不同的乡镇标注
+
+    # 优先从统一配置字典中获取
+    if county in ALL_TOWNSHIP_LABELS:
+        townships = ALL_TOWNSHIP_LABELS[county]
+        if townships:  # 如果配置了乡镇数据
+            return jsonify({
+                "townships": townships,
+                "count": len(townships),
+                "county": county
+            })
+
+    # 兼容旧配置（弋阳县默认）
+    if county == "yiyang":
+        return jsonify({"townships": TOWNSHIP_LABELS, "count": len(TOWNSHIP_LABELS), "county": "yiyang"})
+
+    # 万年县特殊处理（兼容旧配置）
     if county == "wannian":
-        # 万年县乡镇标注（修正后坐标）
         wannian_townships = [
             {"name": "陈营镇", "lng": 117.0794, "lat": 28.7081},
             {"name": "石镇镇", "lng": 116.9691, "lat": 28.8016},
@@ -540,8 +518,9 @@ def api_townships():
             {"name": "珠田乡", "lng": 117.0787, "lat": 28.7756},
         ]
         return jsonify({"townships": wannian_townships, "count": len(wannian_townships), "county": "wannian"})
-    else:
-        return jsonify({"townships": TOWNSHIP_LABELS, "count": len(TOWNSHIP_LABELS), "county": "yiyang"})
+
+    # 新县但未配置乡镇数据
+    return jsonify({"townships": [], "count": 0, "county": county, "note": "暂无乡镇标注数据"})
 
 
 @route("/api/counties")
