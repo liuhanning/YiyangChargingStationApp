@@ -53,22 +53,19 @@ class DataLoader:
         try:
             # 根据县别过滤数据
             if county_filter == "wannian":
-                # 万年县现有充电站数据
+                # 万年县现有充电站数据 —— 从 stations_urban_coords 取（county='万年'）
                 query = """
-                    SELECT township, location, quantity, longitude, latitude
-                    FROM stations_existing_township
-                    WHERE township IN ('陈营', '梓埠', '石镇', '湖云', '齐埠', '汪家', '青云', '苏桥', '上坊', '裴梅', '大源', '珠田')
-                      AND longitude IS NOT NULL AND latitude IS NOT NULL
+                    SELECT station_name, address, longitude, latitude
+                    FROM stations_urban_coords
+                    WHERE county = '万年' AND longitude IS NOT NULL AND latitude IS NOT NULL
                 """
                 df = pd.read_sql(query, self.conn)
 
                 stations = []
                 for _, row in df.iterrows():
-                    # 组合站点名称
-                    name = f"{row['township']}{row['location']}"
                     stations.append({
-                        "name": name,
-                        "addr": f"{row['township']}{row['location']}",
+                        "name": row["station_name"],
+                        "addr": row["address"] or "",
                         "lng": float(row["longitude"]),
                         "lat": float(row["latitude"]),
                     })
@@ -77,10 +74,28 @@ class DataLoader:
                 query = """
                     SELECT station_name, address, longitude, latitude
                     FROM stations_urban_coords
-                    WHERE county = '弋阳' AND longitude IS NOT NULL AND latitude IS NOT NULL
+                    WHERE county = '弋阳县' AND longitude IS NOT NULL AND latitude IS NOT NULL
                 """
                 df = pd.read_sql(query, self.conn)
 
+                stations = []
+                for _, row in df.iterrows():
+                    stations.append({
+                        "name": row["station_name"],
+                        "addr": row["address"] or "",
+                        "lng": float(row["longitude"]),
+                        "lat": float(row["latitude"]),
+                    })
+            elif county_filter in ("jian", "suichuan"):
+                # 吉安县 / 遂川县
+                _cn_map = {"jian": "吉安县", "suichuan": "遂川县"}
+                county_db = _cn_map[county_filter]
+                query = """
+                    SELECT station_name, address, longitude, latitude
+                    FROM stations_urban_coords
+                    WHERE county = ? AND longitude IS NOT NULL AND latitude IS NOT NULL
+                """
+                df = pd.read_sql(query, self.conn, params=(county_db,))
                 stations = []
                 for _, row in df.iterrows():
                     stations.append({
@@ -95,10 +110,10 @@ class DataLoader:
                 query1 = """
                     SELECT station_name, address, longitude, latitude
                     FROM stations_urban_coords
-                    WHERE county = '弋阳' AND longitude IS NOT NULL AND latitude IS NOT NULL
+                    WHERE county = '弋阳县' AND longitude IS NOT NULL AND latitude IS NOT NULL
                 """
                 df1 = pd.read_sql(query1, self.conn)
-                
+
                 stations = []
                 for _, row in df1.iterrows():
                     stations.append({
@@ -107,21 +122,19 @@ class DataLoader:
                         "lng": float(row["longitude"]),
                         "lat": float(row["latitude"]),
                     })
-                
+
                 # 再加载万年县数据
                 query2 = """
-                    SELECT township, location, quantity, longitude, latitude
-                    FROM stations_existing_township
-                    WHERE township IN ('陈营', '梓埠', '石镇', '湖云', '齐埠', '汪家', '青云', '苏桥', '上坊', '裴梅', '大源', '珠田')
-                      AND longitude IS NOT NULL AND latitude IS NOT NULL
+                    SELECT station_name, address, longitude, latitude
+                    FROM stations_urban_coords
+                    WHERE county = '万年' AND longitude IS NOT NULL AND latitude IS NOT NULL
                 """
                 df2 = pd.read_sql(query2, self.conn)
-                
+
                 for _, row in df2.iterrows():
-                    name = f"{row['township']}{row['location']}"
                     stations.append({
-                        "name": name,
-                        "addr": f"{row['township']}{row['location']}",
+                        "name": row["station_name"],
+                        "addr": row["address"] or "",
                         "lng": float(row["longitude"]),
                         "lat": float(row["latitude"]),
                     })
@@ -146,7 +159,7 @@ class DataLoader:
                     SELECT station_name, address, has_ev_charger,
                            total_sales, oil_revenue, longitude, latitude
                     FROM gas_stations
-                    WHERE county = '万年' AND longitude IS NOT NULL AND latitude IS NOT NULL
+                    WHERE county = '万年县'
                 """
                 df = pd.read_sql(query, self.conn)
             elif county_filter == "yiyang":
@@ -155,7 +168,7 @@ class DataLoader:
                     SELECT station_name, address, has_ev_charger,
                            total_sales, oil_revenue, longitude, latitude
                     FROM gas_stations
-                    WHERE county IS NULL OR county != '万年'
+                    WHERE county = '弋阳县'
                 """
                 df = pd.read_sql(query, self.conn)
             else:
@@ -220,8 +233,16 @@ class DataLoader:
             
             # 增加对 county 字段过滤的支持，确保联合视图与单县统计拆分准确
             if county_filter:
-                query += " AND (county = ?)"
-                df = pd.read_sql(query, self.conn, params=(county_filter,))
+                # 处理 "弋阳" 匹配 "弋阳县"，"万年" 匹配 "万年县"
+                if county_filter == "弋阳":
+                    query += " AND (county = ? OR county LIKE ?)"
+                    df = pd.read_sql(query, self.conn, params=("弋阳县", "弋阳"))
+                elif county_filter == "万年":
+                    query += " AND (county = ? OR county LIKE ?)"
+                    df = pd.read_sql(query, self.conn, params=("万年县", "万年"))
+                else:
+                    query += " AND (county = ?)"
+                    df = pd.read_sql(query, self.conn, params=(county_filter,))
             else:
                 df = pd.read_sql(query, self.conn)
 
@@ -230,11 +251,11 @@ class DataLoader:
                 try:
                     qty = int(row["quantity"]) if pd.notna(row["quantity"]) else 0
                     power = int(row["power_kw"]) if pd.notna(row["power_kw"]) else 0
-                    year = int(row["year"]) if pd.notna(row["year"]) else 2026
+                    year = int(row["year"]) if pd.notna(row["year"]) else None
                 except (ValueError, TypeError):
                     qty = 0
                     power = 0
-                    year = 2026
+                    year = None
 
                 try:
                     lng = float(row["longitude"]) if pd.notna(row["longitude"]) else None
@@ -246,7 +267,7 @@ class DataLoader:
                     "name": row["station_name"],
                     "township": row["township"] if pd.notna(row["township"]) else "",
                     "scene": row["scene"] if pd.notna(row["scene"]) else "",
-                    "category": row["category"] if pd.notna(row["category"]) else "公共充电设施",
+                    "category": row["category"] if pd.notna(row["category"]) else "",
                     "category_code": int(row["category_code"]) if pd.notna(row["category_code"]) else 1,
                     "qty": qty,
                     "power": power,
@@ -356,6 +377,124 @@ class DataLoader:
         except Exception as e:
             logger.error(f"✗ 获取统计数据失败：{e}")
             return {}
+
+    def get_planned_stations_edit_list(self, county=None, year=None, township=None,
+                                        keyword=None, limit=100, offset=0):
+        """
+        获取规划充电站编辑列表（支持分页和过滤）
+
+        Args:
+            county: 县过滤（'弋阳'/'万年'/'all'）
+            year: 年份过滤（'all' 或具体年份）
+            township: 乡镇过滤
+            keyword: 关键词搜索（站名或场景）
+            limit: 每页数量
+            offset: 偏移量
+        """
+        if not self.conn:
+            self.connect()
+
+        try:
+            # 基础查询
+            base_query = """
+                SELECT id, station_name, township, scene, quantity,
+                       power_kw, year, equipment, longitude, latitude,
+                       category, category_code, county
+                FROM stations_planned
+                WHERE 1=1
+            """
+            params = []
+
+            # 县过滤
+            if county and county != 'all':
+                if county == 'yiyang':
+                    base_query += " AND (county = ? OR county LIKE ?)"
+                    params.extend(['弋阳县', '弋阳%'])
+                elif county == 'wannian':
+                    base_query += " AND (county = ? OR county LIKE ?)"
+                    params.extend(['万年县', '万年%'])
+                else:
+                    base_query += " AND county = ?"
+                    params.append(county)
+
+            # 年份过滤
+            if year and year != 'all':
+                try:
+                    year_val = int(year)
+                    base_query += " AND year = ?"
+                    params.append(year_val)
+                except (ValueError, TypeError):
+                    pass
+
+            # 乡镇过滤
+            if township:
+                base_query += " AND township LIKE ?"
+                params.append(f'%{township}%')
+
+            # 关键词搜索（站名或场景）
+            if keyword:
+                base_query += " AND (station_name LIKE ? OR scene LIKE ?)"
+                params.extend([f'%{keyword}%', f'%{keyword}%'])
+
+            # 获取总数
+            count_query = f"SELECT COUNT(*) FROM ({base_query}) AS t"
+            cursor = self.conn.cursor()
+            cursor.execute(count_query, params)
+            total = cursor.fetchone()[0]
+
+            # 添加分页和排序
+            base_query += " ORDER BY year DESC, id DESC LIMIT ? OFFSET ?"
+            params.extend([limit, offset])
+
+            # 执行查询
+            cursor.execute(base_query, params)
+            rows = cursor.fetchall()
+
+            # 转换为字典列表
+            items = []
+            for row in rows:
+                try:
+                    qty = int(row[3]) if row[3] is not None else 0
+                    power = int(row[4]) if row[4] is not None else 0
+                    year_val = int(row[5]) if row[5] is not None else None
+                except (ValueError, TypeError):
+                    qty = 0
+                    power = 0
+                    year_val = None
+
+                try:
+                    lng = float(row[8]) if row[8] is not None else None
+                    lat = float(row[9]) if row[9] is not None else None
+                except:
+                    lng, lat = None, None
+
+                items.append({
+                    "id": row[0],
+                    "name": row[1] or "",
+                    "township": row[2] or "",
+                    "scene": row[3] or "",
+                    "qty": qty,
+                    "power": power,
+                    "year": year_val,
+                    "equip": row[6] or "",
+                    "lng": lng,
+                    "lat": lat,
+                    "category": row[10] or "",
+                    "category_code": int(row[11]) if row[11] is not None else 1,
+                    "county": row[12] or "弋阳",
+                })
+
+            logger.info(f"✓ 获取规划站点编辑列表：{len(items)} 条 / 总计 {total} 条")
+            return {
+                "items": items,
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+            }
+
+        except Exception as e:
+            logger.error(f"✗ 获取规划站点编辑列表失败：{e}")
+            return {"items": [], "total": 0, "limit": limit, "offset": offset}
 
 
 # 测试代码

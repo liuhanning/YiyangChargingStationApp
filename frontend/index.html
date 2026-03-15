@@ -938,6 +938,11 @@ python generate_wannian_official.py</pre>
     var TOWNSHIP_DATA = null;
     var allPlannedData = [];   // 全量规划站数据，用于类型筛选
     var activeCats = null;     // null = 全部显示
+    var rawData = {             // 保存原始数据用于导出
+      urban: [],
+      gas: [],
+      plan: []
+    };
 
     // 自定义规划点相关
     var customPlannedPoints = [];  // 存储自定义规划点数据
@@ -1238,6 +1243,9 @@ python generate_wannian_official.py</pre>
 
         // 8. 绑定数据
         allPlannedData = planned.stations;  // 缓存全量数据供筛选使用
+        rawData.urban = urban.stations;
+        rawData.gas = gas.stations;
+        rawData.plan = planned.stations;
         plotUrban(urban.stations);
         plotGas(gas.stations);
         plotPlan(planned.stations);
@@ -2403,56 +2411,44 @@ python generate_wannian_official.py</pre>
     function collectVisiblePoints() {
       var points = [];
 
-      // 收集规划站（蓝色点）
-      if (layers.plan && layers.plan.length > 0) {
-        layers.plan.forEach(function(mk) {
-          if (mk._gisCode !== undefined) {
-            var name = mk._gisName || (mk._gisCode === 0 ? '现有站' : '规划站');
-            var coords = getMarkerCoords(mk);
-            if (coords) {
-              points.push({
-                name: name,
-                lng: coords.lng,
-                lat: coords.lat,
-                type: 'planned'
-              });
-            }
-          }
-        });
-      }
-
       // 收集现有站（绿色点）
-      if (layers.urban && layers.urban.length > 0) {
-        layers.urban.forEach(function(mk) {
-          if (mk._gisCode !== undefined) {
-            var name = mk._gisName || '现有站';
-            var coords = getMarkerCoords(mk);
-            if (coords) {
-              points.push({
-                name: name,
-                lng: coords.lng,
-                lat: coords.lat,
-                type: 'urban'
-              });
-            }
+      if (rawData.urban && rawData.urban.length > 0) {
+        rawData.urban.forEach(function(d) {
+          if (d.lng && d.lat) {
+            points.push({
+              name: d.name,
+              lng: d.lng,
+              lat: d.lat,
+              type: 'urban'
+            });
           }
         });
       }
 
       // 收集加油站（棕色点）
-      if (layers.gas && layers.gas.length > 0) {
-        layers.gas.forEach(function(mk) {
-          if (mk._gisCode !== undefined) {
-            var name = mk._gisName || '加油站';
-            var coords = getMarkerCoords(mk);
-            if (coords) {
-              points.push({
-                name: name,
-                lng: coords.lng,
-                lat: coords.lat,
-                type: 'gas'
-              });
-            }
+      if (rawData.gas && rawData.gas.length > 0) {
+        rawData.gas.forEach(function(d) {
+          if (d.lng && d.lat) {
+            points.push({
+              name: d.name,
+              lng: d.lng,
+              lat: d.lat,
+              type: 'gas'
+            });
+          }
+        });
+      }
+
+      // 收集规划站（蓝色点）
+      if (rawData.plan && rawData.plan.length > 0) {
+        rawData.plan.forEach(function(d) {
+          if (d.lng && d.lat) {
+            points.push({
+              name: d.name,
+              lng: d.lng,
+              lat: d.lat,
+              type: 'plan'
+            });
           }
         });
       }
@@ -2465,7 +2461,7 @@ python generate_wannian_official.py</pre>
       var points = collectVisiblePoints();
 
       if (points.length === 0) {
-        alert('当前地图上没有可见的规划点！\n\n请先在自定义规划模式下添加一些规划点，或打开规划充电站图层。');
+        alert('当前地图上没有可见的规划点！\n\n请确保规划充电站、现有站、加油站等图层已打开。');
         return;
       }
 

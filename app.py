@@ -4,8 +4,9 @@
 """
 import json
 import math
+import os
 from pathlib import Path
-from flask import Flask, jsonify, send_from_directory, request
+from flask import Flask, jsonify, send_from_directory, request, send_file
 from flask_cors import CORS
 from data_loader import DataLoader
 from config import (
@@ -16,6 +17,32 @@ from config import (
 
 app = Flask(__name__, static_folder="frontend", static_url_path="")
 CORS(app)
+
+BASE_PATH = os.getenv("BASE_PATH", "/charging").strip()
+if BASE_PATH == "/":
+    BASE_PATH = ""
+if BASE_PATH and not BASE_PATH.startswith("/"):
+    BASE_PATH = "/" + BASE_PATH
+if BASE_PATH.endswith("/"):
+    BASE_PATH = BASE_PATH.rstrip("/")
+
+
+def with_base(path: str) -> str:
+    if not path.startswith("/"):
+        path = "/" + path
+    return f"{BASE_PATH}{path}" if BASE_PATH else path
+
+
+def route(rule: str, **options):
+    def decorator(func):
+        app.route(rule, **options)(func)
+        if BASE_PATH:
+            pref_rule = f"{BASE_PATH}/" if rule == "/" else f"{BASE_PATH}{rule}"
+            pref_options = dict(options)
+            endpoint = pref_options.pop("endpoint", func.__name__)
+            app.add_url_rule(pref_rule, endpoint=f"{endpoint}__prefixed", view_func=func, **pref_options)
+        return func
+    return decorator
 
 
 def clean_nan(obj):
@@ -36,18 +63,26 @@ def get_loader(county: str = "yiyang"):
 
 # ===== 页面路由 =====
 
-@app.route("/")
+@route("/")
 def index():
     return send_from_directory("frontend", "index.html")
 
-@app.route("/dashboard.html")
+@route("/dashboard.html")
 def dashboard():
     return send_from_directory(".", "dashboard.html")
+
+@route("/calibration")
+def calibration():
+    return send_from_directory("frontend", "calibration.html")
+
+@route("/geocode_tool")
+def geocode_tool():
+    return send_from_directory("frontend", "geocode_tool.html")
 
 
 # ===== API 路由 =====
 
-@app.route("/api/config")
+@route("/api/config")
 def api_config():
     """返回前端所需的配置信息"""
     return jsonify({
@@ -61,7 +96,7 @@ def api_config():
     })
 
 
-@app.route("/api/boundary")
+@route("/api/boundary")
 def api_boundary():
     """
     返回县域边界坐标
@@ -155,7 +190,7 @@ def api_boundary():
             return jsonify({"boundary": [], "count": 0, "error": "弋阳县边界数据加载失败", "county": "yiyang"}), 500
 
 
-@app.route("/api/boundary/all")
+@route("/api/boundary/all")
 def api_all_boundaries():
     """返回所有县的边界（用于联合展示）"""
     result = {}
@@ -183,7 +218,7 @@ def api_all_boundaries():
     return jsonify(result)
 
 
-@app.route("/api/boundary/townships")
+@route("/api/boundary/townships")
 def api_township_boundaries():
     """返回乡镇边界 GeoJSON（支持按县过滤）"""
     county = request.args.get("county", "yiyang")
@@ -235,7 +270,7 @@ def api_township_boundaries():
         return jsonify({"error": f"乡镇边界数据加载失败：{e}", "count": 0, "county": county}), 500
 
 
-@app.route("/api/stations/urban")
+@route("/api/stations/urban")
 def api_urban_stations():
     """现有充电站（支持县别过滤）"""
     county = request.args.get("county", "yiyang")
@@ -245,7 +280,7 @@ def api_urban_stations():
     return jsonify({"stations": stations, "count": len(stations), "county": county})
 
 
-@app.route("/api/stations/gas")
+@route("/api/stations/gas")
 def api_gas_stations():
     """加油站（支持县别过滤）"""
     county = request.args.get("county", "yiyang")
@@ -255,29 +290,192 @@ def api_gas_stations():
     return jsonify({"stations": stations, "count": len(stations), "county": county})
 
 
-@app.route("/api/stations/planned")
+@route("/api/stations/planned")
 def api_planned_stations():
     """
     规划充电站
     支持参数：county=yiyang 或 county=wannian 或 county=all
     """
     county = request.args.get("county", "yiyang")
-    
+
     if county == "wannian":
         # 万年县暂无数据
         return jsonify({"stations": [], "count": 0, "county": "wannian", "note": "数据收集中"})
-    
+
     loader = get_loader()
-    
+
     # 区分单县还是联合视图 (all)
     filter_val = None if county == "all" else "弋阳" if county == "yiyang" else county
-    
+
     stations = loader.load_planned_stations(county_filter=filter_val)
     stations = clean_nan(stations)
     return jsonify({"stations": stations, "count": len(stations), "county": county})
 
 
-@app.route("/api/stats")
+@route("/api/stations/planned/edit-list")
+def api_planned_stations_edit_list():
+    """
+    规划充电站编辑列表（支持分页和过滤）
+    支持参数：
+        - county: 县（yiyang/wannian/all）
+        - year: 年份（all 或具体年份）
+        - township: 乡镇
+        - keyword: 关键词
+        - limit: 每页数量 (默认 100)
+        - offset: 偏移量
+    """
+    county = request.args.get("county", "yiyang")
+    year = request.args.get("year", "all")
+    township = request.args.get("township", "")
+    keyword = request.args.get("keyword", "")
+
+    try:
+        limit = int(request.args.get("limit", "100"))
+    except (ValueError, TypeError):
+        limit = 100
+
+    try:
+        offset = int(request.args.get("offset", "0"))
+    except (ValueError, TypeError):
+        offset = 0
+
+    # 限制最大返回数量
+    if limit > 300:
+        limit = 300
+    if limit < 1:
+        limit = 100
+
+    loader = get_loader()
+    result = loader.get_planned_stations_edit_list(
+        county=county,
+        year=year,
+        township=township,
+        keyword=keyword,
+        limit=limit,
+        offset=offset
+    )
+    result = clean_nan(result)
+    return jsonify(result)
+
+
+@route("/api/stations/planned/batch-update", methods=["POST"])
+def api_planned_stations_batch_update():
+    """
+    批量更新规划充电站数据
+    请求体：
+    {
+        "county": "yiyang",
+        "updates": [
+            {"id": 1, "fields": {"name": "新站名", "qty": 10, ...}},
+            ...
+        ]
+    }
+    """
+    import shutil
+    from datetime import datetime
+
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"error": "请求体为空", "success": False}), 400
+
+        updates = data.get("updates", [])
+        county = data.get("county", "yiyang")
+
+        if not updates:
+            return jsonify({"error": "更新数据为空", "success": False}), 400
+
+        # 备份数据库
+        db_path = DATABASE["path"]
+        backup_path = str(db_path) + ".bak." + datetime.now().strftime("%Y%m%d_%H%M%S")
+        try:
+            shutil.copy2(str(db_path), backup_path)
+            backup_file = Path(backup_path).name
+        except Exception as e:
+            logger.warning(f"数据库备份失败：{e}")
+            backup_file = None
+
+        # 批量更新
+        if not loader.conn:
+            loader.connect()
+
+        updated_count = 0
+        failed_count = 0
+        errors = []
+
+        cursor = loader.conn.cursor()
+
+        for update in updates:
+            try:
+                station_id = update.get("id")
+                fields = update.get("fields", {})
+
+                if not station_id:
+                    failed_count += 1
+                    errors.append({"id": None, "error": "缺少 ID"})
+                    continue
+
+                # 构建更新 SQL
+                allowed_fields = {
+                    "name": "station_name",
+                    "township": "township",
+                    "scene": "scene",
+                    "qty": "quantity",
+                    "power": "power_kw",
+                    "year": "year",
+                    "equip": "equipment",
+                    "lng": "longitude",
+                    "lat": "latitude",
+                    "category": "category",
+                    "category_code": "category_code",
+                    "county": "county",
+                }
+
+                update_fields = []
+                params = []
+
+                for key, value in fields.items():
+                    if key in allowed_fields:
+                        update_fields.append(f"{allowed_fields[key]} = ?")
+                        params.append(value)
+
+                if not update_fields:
+                    failed_count += 1
+                    errors.append({"id": station_id, "error": "无有效字段"})
+                    continue
+
+                params.append(station_id)
+                sql = f"UPDATE stations_planned SET {', '.join(update_fields)} WHERE id = ?"
+                cursor.execute(sql, params)
+
+                if cursor.rowcount > 0:
+                    updated_count += 1
+                else:
+                    failed_count += 1
+                    errors.append({"id": station_id, "error": "未找到记录"})
+
+            except Exception as e:
+                failed_count += 1
+                errors.append({"id": update.get("id"), "error": str(e)})
+                logger.error(f"更新失败 ID={update.get('id')}: {e}")
+
+        # 提交事务
+        loader.conn.commit()
+
+        return jsonify({
+            "success": True,
+            "updated_count": updated_count,
+            "failed_count": failed_count,
+            "errors": errors[:10],  # 最多返回 10 条错误
+            "backup_file": backup_file,
+        })
+
+    except Exception as e:
+        logger.error(f"批量更新失败：{e}")
+        return jsonify({"error": str(e), "success": False}), 500
+
+
+@route("/api/stats")
 def api_stats():
     """
     统计摘要
@@ -304,7 +502,7 @@ def api_stats():
     return jsonify(stats)
 
 
-@app.route("/api/economic")
+@route("/api/economic")
 def api_economic():
     """
     经济数据
@@ -319,7 +517,7 @@ def api_economic():
     return jsonify({"data": [], "count": 0, "region": region})
 
 
-@app.route("/api/townships")
+@route("/api/townships")
 def api_townships():
     """返回乡镇标注数据"""
     county = request.args.get("county", "yiyang")
@@ -346,13 +544,13 @@ def api_townships():
         return jsonify({"townships": TOWNSHIP_LABELS, "count": len(TOWNSHIP_LABELS), "county": "yiyang"})
 
 
-@app.route("/api/counties")
+@route("/api/counties")
 def api_counties():
     """返回支持的县列表"""
     return jsonify({"counties": SUPPORTED_COUNTIES})
 
 
-@app.route("/api/generate-dynamic-map", methods=["POST"])
+@route("/api/generate-dynamic-map", methods=["POST"])
 def api_generate_dynamic_map():
     """
     根据前端发送的点位数据生成动态规划图
@@ -381,8 +579,9 @@ def api_generate_dynamic_map():
         return jsonify({
             "success": True,
             "message": f"成功生成包含 {len(points)} 个规划点的地图",
-            "png_file": png_path,
-            "pdf_file": pdf_path,
+            "png_file": Path(png_path).name,
+            "pdf_file": Path(pdf_path).name,
+            "preview_url": with_base(f"/api/dynamic-map/{Path(png_path).name}"),
             "points_count": len(points)
         })
 
@@ -391,7 +590,7 @@ def api_generate_dynamic_map():
         return jsonify({"error": str(e), "success": False}), 500
 
 
-@app.route("/api/dynamic-map/<filename>")
+@route("/api/dynamic-map/<filename>")
 def api_dynamic_map_file(filename):
     """获取动态生成的地图文件"""
     from generate_dynamic_map import OUTPUT_DIR
@@ -404,7 +603,7 @@ def api_dynamic_map_file(filename):
     return send_file(file_path)
 
 
-@app.route("/api/dynamic-map-list")
+@route("/api/dynamic-map-list")
 def api_dynamic_map_list():
     """获取动态地图文件列表"""
     from generate_dynamic_map import OUTPUT_DIR
@@ -415,7 +614,7 @@ def api_dynamic_map_list():
             "filename": f.name,
             "size": f.stat().st_size,
             "created": f.stat().st_mtime,
-            "url": f"/api/dynamic-map/{f.name}"
+            "url": with_base(f"/api/dynamic-map/{f.name}")
         })
 
     return jsonify({
@@ -425,12 +624,19 @@ def api_dynamic_map_list():
 
 
 if __name__ == "__main__":
+    run_host = os.getenv("HOST", "0.0.0.0")
+    run_port = int(os.getenv("PORT", "5000"))
+    run_debug = os.getenv("FLASK_DEBUG", "0") == "1"
+
     print("=" * 60)
     print("  弋阳县/万年县充换电设施规划系统（联合申报版）")
-    print("  http://localhost:5000")
+    print(f"  http://localhost:{run_port}")
+    if BASE_PATH:
+        print(f"  BASE_PATH: {BASE_PATH}")
+        print(f"  prefixed home: http://localhost:{run_port}{BASE_PATH}/")
     print("  支持：弋阳县、万年县")
     print("  API: /api/config, /api/boundary?county=yiyang|wannian")
     print("       /api/stations/planned?county=yiyang|wannian|all")
     print("       /api/stats?county=yiyang|wannian|all")
     print("=" * 60)
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=run_debug, host=run_host, port=run_port)
