@@ -7,125 +7,225 @@
   <title>弋阳县/万年县充换电设施规划地图</title>
   <meta name="description" content="弋阳县充换电设施规划动态地图系统，数据实时读取自SQLite数据库">
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script>
+    (function initBasePath() {
+      var m = window.location.pathname.match(/^\/charging(?:\/|$)/);
+      var base = m ? "/charging" : "";
+      window.APP_BASE_PATH = base;
+      window.API_BASE = (base || "") + "/api";
+
+      var nativeFetch = window.fetch ? window.fetch.bind(window) : null;
+      if (!nativeFetch) return;
+
+      window.fetch = function (input, init) {
+        var url = typeof input === "string" ? input : (input && input.url);
+        if (typeof url === "string" && url.indexOf("/api/") === 0) {
+          var nextUrl = (base || "") + url;
+          if (typeof input === "string") {
+            return nativeFetch(nextUrl, init);
+          }
+          return nativeFetch(new Request(nextUrl, input), init);
+        }
+        return nativeFetch(input, init);
+      };
+    })();
+  </script>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0
+    /* ── 设计系统变量 ── */
+    :root {
+      --sidebar-w: 220px;
+      --header-h: 52px;
+      /* 深色底板 */
+      --nav-bg:        oklch(13% 0.03 255);
+      --sidebar-bg:    oklch(16% 0.04 255);
+      --section-bg:    oklch(19% 0.04 255);
+      --section-hover: oklch(22% 0.05 255);
+      --border:        oklch(30% 0.05 255 / 0.65);
+      --border-subtle: oklch(25% 0.04 255 / 0.8);
+      /* 强调色 */
+      --accent:        oklch(67% 0.19 205);
+      --accent-dim:    oklch(67% 0.19 205 / 0.14);
+      --accent-hover:  oklch(72% 0.21 205);
+      --success:       oklch(66% 0.19 148);
+      /* 文字 */
+      --text-1: oklch(93% 0.01 255);
+      --text-2: oklch(67% 0.04 255);
+      --text-3: oklch(46% 0.04 255);
+      /* 交互元素 */
+      --btn-bg:     oklch(23% 0.05 255);
+      --btn-border: oklch(34% 0.06 255);
+      --btn-hover:  oklch(27% 0.06 255);
     }
+
+    * { box-sizing: border-box; margin: 0; padding: 0 }
 
     body {
-      font-family: 'Microsoft YaHei', Arial, sans-serif;
-      background: #f0f2f5;
-      overflow: hidden
+      font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+      background: oklch(16% 0.04 255);
+      overflow: hidden;
+      color: var(--text-1);
     }
 
-    /* 头部 - 浅色主题 */
+    /* ── 头部 ── */
     #header {
-      height: 52px;
-      background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
-      color: #1a3a5c;
-      padding: 0 24px;
+      height: var(--header-h);
+      background: var(--nav-bg);
+      color: var(--text-1);
+      padding: 0 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 2px solid #3388cc;
+      border-bottom: 1px solid var(--border);
       position: relative;
       z-index: 200;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 1px 0 oklch(67% 0.19 205 / 0.25), 0 2px 12px oklch(0% 0 0 / 0.3);
     }
 
     #header h1 {
-      font-size: 17px;
-      letter-spacing: 1px;
+      font-size: 15px;
+      letter-spacing: 0.5px;
       font-weight: 700;
-      color: #1a3a5c
+      color: var(--text-1);
     }
 
     #header .sub {
-      font-size: 11px;
-      color: #5a8bb5;
-      margin-top: 1px
+      font-size: 10px;
+      color: var(--text-3);
+      margin-top: 2px;
+      letter-spacing: 0.5px;
     }
 
     #header .stats {
       font-size: 11px;
-      color: #5a8bb5;
-      text-align: right
+      color: var(--text-2);
+      text-align: right;
     }
 
-    #header .stats b {
-      color: #1a3a5c
+    #header .stats b { color: var(--accent) }
+
+    #portal-home-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid oklch(67% 0.19 205 / 0.35);
+      background: oklch(22% 0.05 255);
+      color: var(--text-1);
+      text-decoration: none;
+      font-size: 11px;
+      white-space: nowrap;
     }
 
+    #portal-home-link:hover {
+      border-color: var(--accent);
+      color: var(--accent-hover);
+    }
+
+    #admin-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid oklch(67% 0.19 148 / 0.35);
+      background: oklch(22% 0.05 148);
+      color: var(--text-1);
+      text-decoration: none;
+      font-size: 11px;
+      white-space: nowrap;
+      margin-left: 8px;
+    }
+
+    #admin-link:hover {
+      border-color: var(--success);
+      color: oklch(72% 0.21 148);
+    }
+
+    /* 头部县域选择器 */
+    #county-selector {
+      padding: 5px 10px !important;
+      border: 1px solid oklch(67% 0.19 205 / 0.35) !important;
+      border-radius: 7px !important;
+      font-size: 12px !important;
+      background: oklch(22% 0.05 255) !important;
+      color: var(--text-1) !important;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.15s;
+      font-family: inherit;
+    }
+    #county-selector:hover, #county-selector:focus {
+      border-color: var(--accent) !important;
+    }
+    #county-selector option {
+      background: oklch(22% 0.05 255);
+      color: var(--text-1);
+    }
+
+    /* 头部标签文字 */
+    #header label {
+      font-size: 11px !important;
+      color: var(--text-3) !important;
+    }
+
+    /* ── 地图区域 ── */
     #map {
-      width: calc(100% - 220px);
-      margin-left: 220px;
-      height: calc(100vh - 52px);
+      width: calc(100% - var(--sidebar-w));
+      margin-left: var(--sidebar-w);
+      height: calc(100vh - var(--header-h));
       position: relative;
-      z-index: 1
+      z-index: 1;
     }
 
-    /* 加载提示 */
+    /* ── 加载提示 ── */
     #loading-overlay {
       position: fixed;
-      top: 52px;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      top: var(--header-h);
+      left: 0; right: 0; bottom: 0;
       z-index: 500;
-      background: rgba(255, 255, 255, 0.88);
+      background: oklch(13% 0.03 255 / 0.82);
       display: flex;
       align-items: center;
       justify-content: center;
       transition: opacity 0.8s ease;
     }
-
-    #loading-overlay.hide {
-      opacity: 0;
-      pointer-events: none
-    }
+    #loading-overlay.hide { opacity: 0; pointer-events: none }
 
     #loading-box {
-      background: rgba(40, 40, 40, 0.85);
-      color: #fff;
-      padding: 16px 40px;
-      border-radius: 10px;
-      font-size: 14px;
+      background: oklch(20% 0.05 255 / 0.96);
+      color: var(--text-1);
+      padding: 18px 44px;
+      border-radius: 12px;
+      font-size: 13px;
       letter-spacing: 2px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border);
+      box-shadow: 0 8px 40px oklch(0% 0 0 / 0.5);
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
 
     .spinner {
-      width: 20px;
-      height: 20px;
-      border: 3px solid rgba(255, 255, 255, 0.3);
-      border-top-color: #fff;
+      width: 20px; height: 20px;
+      border: 2px solid oklch(67% 0.19 205 / 0.2);
+      border-top-color: var(--accent);
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
+    @keyframes spin { to { transform: rotate(360deg) } }
 
-    @keyframes spin {
-      to {
-        transform: rotate(360deg)
-      }
-    }
-
-    /* ===== 左侧统一侧边栏 ===== */
+    /* ── 左侧侧边栏 ── */
     #sidebar {
       position: fixed;
-      top: 56px;
+      top: var(--header-h);
       left: 0;
-      width: 220px;
-      height: calc(100vh - 56px);
+      width: var(--sidebar-w);
+      height: calc(100vh - var(--header-h));
       z-index: 9999;
-      background: rgba(255, 255, 255, 0.97);
-      backdrop-filter: blur(8px);
-      border-right: 1px solid #d0d7de;
-      box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08);
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      box-shadow: 2px 0 20px oklch(0% 0 0 / 0.35);
       overflow-y: auto;
       overflow-x: hidden;
       display: flex;
@@ -133,448 +233,361 @@
       pointer-events: auto;
     }
 
-    #sidebar::-webkit-scrollbar {
-      width: 4px;
-    }
-
+    #sidebar::-webkit-scrollbar { width: 3px }
     #sidebar::-webkit-scrollbar-thumb {
-      background: #c0cfd8;
+      background: oklch(38% 0.05 255);
       border-radius: 2px;
     }
 
-    .sb-section {
-      border-bottom: 1px solid #eef1f4;
-    }
+    .sb-section { border-bottom: 1px solid var(--border-subtle) }
 
     .sb-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 14px;
+      padding: 9px 14px;
       cursor: pointer;
       user-select: none;
-      font-size: 12px;
-      font-weight: 700;
-      color: #1a3a5c;
-      letter-spacing: 0.3px;
-      background: #f8fafc;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--text-2);
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+      background: var(--section-bg);
+      transition: background 0.15s, color 0.15s;
     }
-
-    .sb-header:hover {
-      background: #f0f5fa;
-    }
+    .sb-header:hover { background: var(--section-hover); color: var(--text-1) }
 
     .sb-arrow {
-      font-size: 10px;
-      color: #8ba3b8;
+      font-size: 9px;
+      color: var(--text-3);
       transition: transform 0.2s;
     }
 
     .sb-body {
-      padding: 8px 12px 10px;
+      padding: 10px 12px 12px;
+      background: var(--sidebar-bg);
     }
+    .sb-body.collapsed { display: none }
 
-    .sb-body.collapsed {
-      display: none;
-    }
-
-    /* Keep .ctrl class for any remnant - redirect visually */
-    .ctrl {
-      display: none !important;
-    }
+    .ctrl { display: none !important }
 
     .ctrl-title {
-      font-size: 11px;
-      color: #5a7a96;
+      font-size: 10px;
+      color: var(--text-3);
       margin-bottom: 8px;
-      font-weight: 700;
+      font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      border-bottom: 1px solid #e8ecf0;
+      border-bottom: 1px solid var(--border-subtle);
       padding-bottom: 6px;
     }
 
+    /* ── 模式按钮 ── */
     .mode-btn {
       width: 100%;
-      padding: 8px 10px;
+      padding: 7px 10px;
       margin: 3px 0;
-      border: 1px solid #d8dfe6;
+      border: 1px solid var(--btn-border);
       border-radius: 7px;
-      background: #fff;
-      color: #2c3e50;
+      background: var(--btn-bg);
+      color: var(--text-2);
       font-size: 12px;
       cursor: pointer;
-      transition: all .2s;
+      transition: all 0.15s;
       text-align: left;
       display: flex;
       align-items: center;
-      gap: 8px
+      gap: 8px;
+      font-family: inherit;
     }
-
     .mode-btn:hover {
-      background: #f0f6fc;
-      border-color: #3388cc
+      background: var(--btn-hover);
+      border-color: oklch(67% 0.19 205 / 0.45);
+      color: var(--text-1);
     }
-
     .mode-btn.active {
-      background: #e1f0ff;
-      border-color: #3388cc;
-      color: #0969da;
-      font-weight: 600
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
     }
 
+    /* ── 图层行 ── */
     .layer-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 6px 0;
-      border-bottom: 1px solid #eef1f4
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border-subtle);
     }
-
-    .layer-row:last-child {
-      border-bottom: none
-    }
+    .layer-row:last-child { border-bottom: none }
 
     .layer-info {
       display: flex;
       align-items: center;
       gap: 7px;
       font-size: 12px;
-      color: #2c3e50
+      color: var(--text-2);
     }
 
+    /* ── 场景 Tab ── */
+    .scene-tab {
+      padding: 4px 9px;
+      font-size: 11px;
+      border: 1px solid var(--btn-border);
+      border-radius: 14px;
+      background: oklch(21% 0.04 255);
+      color: var(--text-2);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+    .scene-tab:hover {
+      border-color: oklch(67% 0.19 205 / 0.5);
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .scene-tab-active {
+      background: oklch(67% 0.19 205 / 0.2);
+      color: var(--accent);
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* ── 图例小圆点 ── */
     .dot {
-      width: 12px;
-      height: 12px;
+      width: 11px; height: 11px;
       border-radius: 50%;
       flex-shrink: 0;
-      border: 1px solid rgba(0, 0, 0, 0.1)
+      border: 1px solid oklch(100% 0 0 / 0.15);
     }
 
-    /* 切换开关 */
+    /* ── 切换开关 ── */
     .toggle {
       position: relative;
-      width: 36px;
-      height: 20px;
-      flex-shrink: 0
+      width: 36px; height: 20px;
+      flex-shrink: 0;
     }
-
-    .toggle input {
-      opacity: 0;
-      width: 0;
-      height: 0
-    }
+    .toggle input { opacity: 0; width: 0; height: 0 }
 
     .slider {
-      position: absolute;
-      inset: 0;
-      background: #c8d0d8;
+      position: absolute; inset: 0;
+      background: oklch(28% 0.04 255);
       border-radius: 20px;
       cursor: pointer;
-      transition: .2s
+      transition: 0.2s;
     }
-
     .slider:before {
       content: '';
       position: absolute;
-      width: 14px;
-      height: 14px;
-      background: #fff;
+      width: 14px; height: 14px;
+      background: oklch(74% 0.02 255);
       border-radius: 50%;
-      bottom: 3px;
-      left: 3px;
-      transition: .2s;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2)
+      bottom: 3px; left: 3px;
+      transition: 0.2s;
+      box-shadow: 0 1px 3px oklch(0% 0 0 / 0.35);
     }
+    input:checked + .slider { background: var(--c, var(--success)) }
+    input:checked + .slider:before { transform: translateX(16px) }
 
-    input:checked+.slider {
-      background: var(--c, #3fb950)
-    }
-
-    input:checked+.slider:before {
-      transform: translateX(16px)
-    }
-
-    /* 信息弹窗 */
+    /* ── 信息弹窗（地图点击） ── */
     .info-window {
-      background: #fff;
-      border: 1px solid #d0d7de;
-      border-radius: 8px;
+      background: oklch(19% 0.04 255);
+      border: 1px solid var(--border);
+      border-radius: 10px;
       padding: 12px;
       min-width: 200px;
       max-width: 280px;
       font-size: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12)
+      box-shadow: 0 8px 28px oklch(0% 0 0 / 0.45);
     }
-
     .info-title {
-      font-size: 14px;
-      font-weight: bold;
-      color: #1a3a5c;
-      border-bottom: 2px solid #e1ecf4;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-1);
+      border-bottom: 1px solid var(--border-subtle);
       padding-bottom: 7px;
-      margin-bottom: 7px
+      margin-bottom: 7px;
     }
-
-    .info-row {
-      color: #4a6a84;
-      margin: 4px 0;
-      line-height: 1.6
-    }
-
-    .info-row b {
-      color: #1a3a5c
-    }
+    .info-row { color: var(--text-2); margin: 5px 0; line-height: 1.6 }
+    .info-row b { color: var(--text-1) }
 
     .badge {
       display: inline-block;
       padding: 2px 8px;
       border-radius: 4px;
       font-size: 11px;
-      margin-top: 2px
+      margin-top: 2px;
     }
+    .badge-green  { background: oklch(66% 0.19 148 / 0.18); color: oklch(76% 0.2 148);  border: 1px solid oklch(66% 0.19 148 / 0.45) }
+    .badge-blue   { background: oklch(67% 0.19 205 / 0.18); color: oklch(76% 0.2 205);  border: 1px solid oklch(67% 0.19 205 / 0.45) }
+    .badge-orange { background: oklch(72% 0.19 65  / 0.18); color: oklch(78% 0.2 65);   border: 1px solid oklch(72% 0.19 65  / 0.45) }
 
-    .badge-green {
-      background: #dafbe1;
-      color: #1a7f37;
-      border: 1px solid #4ac26b
-    }
-
-    .badge-blue {
-      background: #ddf4ff;
-      color: #0969da;
-      border: 1px solid #54aeff
-    }
-
-    .badge-orange {
-      background: #fff8c5;
-      color: #9a6700;
-      border: 1px solid #d4a72c
-    }
-
-    /* 右下角统计面板 */
+    /* ── 右下角统计面板 ── */
     #stats-panel {
       position: fixed;
-      bottom: 16px;
-      right: 16px;
+      bottom: 16px; right: 16px;
       z-index: 9999;
-      background: rgba(255, 255, 255, 0.82);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(208, 215, 222, 0.6);
-      border-radius: 10px;
-      padding: 14px 18px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      background: oklch(16% 0.04 255 / 0.93);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 13px 18px;
+      box-shadow: 0 8px 28px oklch(0% 0 0 / 0.4);
       font-size: 12px;
-      color: #2c3e50;
-      line-height: 1.8;
+      color: var(--text-2);
+      line-height: 1.85;
+      min-width: 178px;
     }
-
     .stats-title {
       font-weight: 700;
-      font-size: 13px;
-      color: #1a3a5c;
+      font-size: 11.5px;
+      color: var(--text-1);
       margin-bottom: 6px;
-      border-bottom: 1px solid #e8ecf0;
-      padding-bottom: 4px
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 5px;
+      letter-spacing: 0.3px;
     }
+    .stats-row { display: flex; align-items: center; gap: 6px }
+    .stats-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0 }
+    .stats-val { font-weight: 700; color: var(--text-1) }
 
-    .stats-row {
-      display: flex;
-      align-items: center;
-      gap: 6px
-    }
-
-    .stats-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0
-    }
-
-    .stats-val {
-      font-weight: 700;
-      color: #1a3a5c
-    }
-
-    /* 左边栏图例样式项 */
+    /* ── 图例项 ── */
     .legend-item {
       display: flex;
       align-items: center;
       gap: 6px;
-      margin: 3px 0
+      margin: 3px 0;
+      color: var(--text-2);
+      font-size: 12px;
     }
 
-    /* 数据来源标识 */
+    /* ── 数据来源 ── */
     #data-source {
       position: fixed;
       bottom: 16px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 9999;
-      background: rgba(255, 255, 255, 0.9);
-      border: 1px solid #d0d7de;
+      background: oklch(16% 0.04 255 / 0.9);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
       border-radius: 6px;
-      padding: 4px 12px;
+      padding: 4px 14px;
       font-size: 10px;
-      color: #8b949e;
+      color: var(--text-3);
     }
+    #data-source .live { color: var(--success); font-weight: 700 }
 
-    #data-source .live {
-      color: #2ecc40;
-      font-weight: 700
-    }
-
-    /* 强制天地图标注透明底、描边字 */
+    /* 天地图标注覆盖 */
     #map .tdt-label {
       background: transparent !important;
       border: none !important;
       box-shadow: none !important;
       font-weight: bold;
-      text-shadow:
-        -1px -1px 0 #fff,
-        1px -1px 0 #fff,
-        -1px 1px 0 #fff,
-        1px 1px 0 #fff,
-        0px 2px 4px rgba(0, 0, 0, 0.4);
+      text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 2px 4px rgba(0,0,0,0.4);
     }
-
-    /* 终极解法：使用 CSS 在物理渲染层强制屏蔽天地图各类汉字注记切片（cva_w/cva_c/eva_w/eva_c） */
-    img[src*="cva_"],
-    img[src*="eva_"],
-    img[src*="cva"],
-    img[src*="eva"] {
+    img[src*="cva_"], img[src*="eva_"], img[src*="cva"], img[src*="eva"] {
       display: none !important;
       opacity: 0 !important;
       visibility: hidden !important;
     }
 
-    /* 极简指北针 */
+    /* ── 指北针 ── */
     #compass {
       position: absolute;
-      top: 20px;
-      right: 20px;
+      top: 20px; right: 20px;
       z-index: 9999;
       width: 24px;
       text-align: center;
       pointer-events: none;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
     }
-
     #compass .n {
-      font-size: 16px;
+      font-size: 13px;
       font-weight: 900;
-      font-family: 'Arial Black', sans-serif;
-      color: #333;
+      color: oklch(20% 0.04 255);
       margin-bottom: -2px;
     }
-
     #compass .arrow {
-      width: 0;
-      height: 0;
+      width: 0; height: 0;
       border-left: 6px solid transparent;
       border-right: 6px solid transparent;
-      border-bottom: 24px solid #1a3a5c;
+      border-bottom: 24px solid oklch(20% 0.04 255);
       margin: 0 auto;
     }
 
-    /* 右侧缩放按钮组 */
+    /* ── 缩放按钮 ── */
     #zoom-controls {
       position: absolute;
-      top: 72px;
-      /* 指北针 (高约52px) 下方留20px */
-      right: 14px;
+      top: 72px; right: 14px;
       z-index: 9999;
       display: flex;
       flex-direction: column;
       gap: 4px;
     }
-
     .zoom-btn {
-      width: 32px;
-      height: 32px;
-      background: rgba(255, 255, 255, 0.92);
+      width: 32px; height: 32px;
+      background: oklch(97% 0.01 255 / 0.93);
       backdrop-filter: blur(6px);
-      border: 1px solid rgba(180, 200, 220, 0.8);
+      border: 1px solid oklch(82% 0.04 255 / 0.55);
       border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 2px 8px oklch(0% 0 0 / 0.14);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 20px;
       font-weight: 300;
-      color: #1a3a5c;
+      color: oklch(28% 0.05 255);
       line-height: 1;
       user-select: none;
       transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
       -webkit-tap-highlight-color: transparent;
     }
-
     .zoom-btn:hover {
-      background: rgba(230, 242, 255, 0.98);
-      border-color: #3388cc;
-      box-shadow: 0 3px 12px rgba(51, 136, 204, 0.25);
-      color: #0969da;
+      background: oklch(90% 0.06 205 / 0.98);
+      border-color: oklch(67% 0.19 205 / 0.55);
+      box-shadow: 0 3px 12px oklch(67% 0.19 205 / 0.22);
+      color: oklch(40% 0.18 205);
     }
-
     .zoom-btn:active {
-      transform: scale(0.90);
-      background: rgba(209, 232, 255, 1);
-      box-shadow: 0 1px 4px rgba(51, 136, 204, 0.2);
+      transform: scale(0.91);
+      background: oklch(84% 0.09 205);
     }
-
-    /* 中间细分隔线 */
     .zoom-divider {
-      width: 22px;
-      height: 1px;
-      background: rgba(180, 200, 220, 0.6);
+      width: 22px; height: 1px;
+      background: oklch(82% 0.04 255 / 0.45);
       margin: 0 auto;
     }
 
-    /* 弹窗样式 */
+    /* ── 弹窗 ── */
     .modal {
       display: none;
       position: fixed;
       z-index: 10000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
+      left: 0; top: 0; width: 100%; height: 100%;
+      background: oklch(0% 0 0 / 0.62);
       animation: fadeIn 0.2s;
+      backdrop-filter: blur(3px);
     }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0
-      }
-
-      to {
-        opacity: 1
-      }
-    }
+    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
 
     .modal-content {
-      background-color: #fff;
+      background: #fff;
       margin: 10% auto;
       padding: 24px;
-      border-radius: 12px;
+      border-radius: 14px;
       width: 600px;
       max-width: 90%;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-      animation: slideIn 0.3s;
+      box-shadow: 0 28px 80px oklch(0% 0 0 / 0.42);
+      animation: slideIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-
     @keyframes slideIn {
-      from {
-        transform: translateY(-50px);
-        opacity: 0
-      }
-
-      to {
-        transform: translateY(0);
-        opacity: 1
-      }
+      from { transform: translateY(-36px) scale(0.97); opacity: 0 }
+      to   { transform: translateY(0) scale(1); opacity: 1 }
     }
 
     .modal-header {
@@ -583,59 +596,39 @@
       align-items: center;
       margin-bottom: 20px;
       padding-bottom: 12px;
-      border-bottom: 2px solid #e1e4e8;
+      border-bottom: 1px solid #e8ecf2;
     }
-
-    .modal-header h2 {
-      font-size: 18px;
-      color: #24292f;
-      margin: 0;
-    }
+    .modal-header h2 { font-size: 17px; color: #1a2332; margin: 0; font-weight: 700 }
 
     .close-btn {
-      color: #6e7781;
-      font-size: 28px;
-      font-weight: bold;
+      color: #94a3b8;
+      font-size: 20px;
+      font-weight: 400;
       cursor: pointer;
       line-height: 1;
-      background: #f6f8fa;
-      width: 32px;
-      height: 32px;
+      background: #f3f4f6;
+      width: 30px; height: 30px;
       display: flex;
       align-items: center;
       justify-content: center;
       border-radius: 6px;
-      transition: all .2s;
+      transition: all 0.15s;
     }
+    .close-btn:hover { color: #1a2332; background: #e5e7eb }
 
-    .close-btn:hover {
-      color: #24292f;
-      background: #e1e4e8;
-    }
-
-    .modal-body {
-      color: #57606a;
-      line-height: 1.8;
-    }
-
-    .modal-body h3 {
-      color: #24292f;
-      margin: 16px 0 8px 0;
-      font-size: 15px;
-    }
-
+    .modal-body { color: #4b5563; line-height: 1.8 }
+    .modal-body h3 { color: #1a2332; margin: 16px 0 8px; font-size: 14px; font-weight: 600 }
     .modal-body code {
-      background: #f6f8fa;
+      background: #f3f4f6;
       padding: 2px 6px;
       border-radius: 4px;
-      color: #cf222e;
+      color: #c0392b;
       font-family: 'Consolas', 'Monaco', monospace;
       font-size: 13px;
     }
-
     .modal-body pre {
-      background: #161b22;
-      color: #c9d1d9;
+      background: #1a2332;
+      color: #cbd5e1;
       padding: 14px;
       border-radius: 8px;
       overflow-x: auto;
@@ -643,53 +636,140 @@
       font-size: 13px;
       line-height: 1.6;
     }
-
-    .modal-body ul {
-      margin: 8px 0;
-      padding-left: 20px;
-    }
-
-    .modal-body li {
-      margin: 4px 0;
-    }
+    .modal-body ul { margin: 8px 0; padding-left: 20px }
+    .modal-body li { margin: 4px 0 }
 
     .modal-footer {
       margin-top: 20px;
       padding-top: 16px;
-      border-top: 1px solid #e1e4e8;
+      border-top: 1px solid #e8ecf2;
       display: flex;
       gap: 10px;
       justify-content: flex-end;
     }
 
     .modal-btn {
-      padding: 10px 20px;
-      border-radius: 6px;
+      padding: 9px 18px;
+      border-radius: 8px;
       border: none;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 500;
-      transition: all .2s;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+    .modal-btn-primary { background: oklch(55% 0.19 220); color: #fff }
+    .modal-btn-primary:hover { background: oklch(48% 0.19 220) }
+    .modal-btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db }
+    .modal-btn-secondary:hover { background: #e5e7eb }
+
+    /* ── 规划表格 ── */
+    .pe-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      min-width: 1350px;
+    }
+    .pe-table th {
+      position: sticky; top: 0; z-index: 1;
+      background: #f8fafc;
+      color: #64748b;
+      border: 1px solid #e2e8f0;
+      padding: 7px 6px;
+      text-align: left;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .pe-table td {
+      border: 1px solid #e2e8f0;
+      padding: 4px 6px;
+      vertical-align: middle;
+      background: #fff;
+    }
+    .pe-table input {
+      width: 100%;
+      padding: 4px 6px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 12px;
+      box-sizing: border-box;
+      background: #fff;
+      color: #1e293b;
+    }
+    .pe-readonly {
+      background: #f8fafc !important;
+      color: #64748b;
+      font-weight: 600;
+      text-align: center;
+      white-space: nowrap;
     }
 
-    .modal-btn-primary {
-      background: #1f6feb;
-      color: #fff;
+    .planned-edit-window {
+      position: absolute;
+      top: 16px; left: 16px;
+      margin: 0;
+      width: min(1400px, calc(100vw - 32px));
+      max-width: min(1400px, calc(100vw - 32px));
+      max-height: calc(100vh - 32px);
+      display: flex;
+      flex-direction: column;
+      padding: 14px 16px;
+      box-sizing: border-box;
+    }
+    #plannedEditModal .modal-header { cursor: move; user-select: none }
+
+    /* ── 侧边栏表单元素（覆盖 inline style） ── */
+    #sidebar select,
+    #sidebar input[type="text"],
+    #sidebar input[type="number"] {
+      width: 100% !important;
+      padding: 7px 10px !important;
+      border: 1px solid var(--btn-border) !important;
+      border-radius: 7px !important;
+      font-size: 12px !important;
+      background: oklch(21% 0.04 255) !important;
+      color: var(--text-1) !important;
+      outline: none;
+      transition: border-color 0.15s;
+      font-family: inherit;
+      margin-bottom: 6px;
+    }
+    #sidebar select:hover, #sidebar select:focus,
+    #sidebar input[type="text"]:hover, #sidebar input[type="text"]:focus,
+    #sidebar input[type="number"]:hover, #sidebar input[type="number"]:focus {
+      border-color: oklch(67% 0.19 205 / 0.6) !important;
+    }
+    #sidebar select option {
+      background: oklch(21% 0.04 255);
+      color: var(--text-1);
     }
 
-    .modal-btn-primary:hover {
-      background: #0d5bd0;
+    /* 侧边栏重置/工具按钮（浅色背景 inline style 覆盖） */
+    #sbYear button,
+    #sbDataEdit button:not([style*="background:#1f6feb"]):not([style*="background:#374151"]) {
+      background: var(--btn-bg) !important;
+      color: var(--text-2) !important;
+      border: 1px solid var(--btn-border) !important;
+    }
+    #sbYear button:hover,
+    #sbDataEdit button:hover {
+      background: var(--btn-hover) !important;
+      color: var(--text-1) !important;
     }
 
-    .modal-btn-secondary {
-      background: #f6f8fa;
-      color: #24292f;
-      border: 1px solid #d0d7de;
-    }
+    /* 侧边栏所有按钮通用交互 */
+    #sidebar button { font-family: inherit; transition: filter 0.15s, transform 0.1s }
+    #sidebar button:hover  { filter: brightness(1.12) }
+    #sidebar button:active { transform: scale(0.98) }
 
-    .modal-btn-secondary:hover {
-      background: #e1e4e8;
-    }
+    /* 年份筛选 checkbox 文字颜色 */
+    #yearFilters label { color: var(--text-2) !important; font-size: 12px }
+    #yearFilters input[type="checkbox"] { accent-color: var(--accent) }
+
+    /* 侧边栏内 dirty hint / status 文字 */
+    #peDirtyHint { background: oklch(40% 0.15 65 / 0.2) !important; border-color: oklch(65% 0.18 65 / 0.4) !important; color: oklch(78% 0.18 65) !important }
+    #peStatus { color: var(--text-3) !important }
+    #catTablesResult { background: oklch(40% 0.15 148 / 0.15) !important; border-color: oklch(55% 0.17 148 / 0.4) !important; color: oklch(72% 0.18 148) !important }
   </style>
 </head>
 
@@ -706,8 +786,13 @@
         style="padding:4px 8px;border:1px solid #3388cc;border-radius:4px;font-size:11px;background:#fff;color:#1a3a5c;cursor:pointer">
         <option value="yiyang">弋阳县</option>
         <option value="wannian">万年县</option>
+        <option value="jian">吉安县</option>
+        <option value="suichuan">遂川县</option>
+        <option value="jian_suichuan">吉安/遂川联合</option>
         <option value="all">两县联合</option>
       </select>
+      <a id="portal-home-link" href="../" title="返回统一门户">返回统一门户</a>
+      <a id="admin-link" href="admin/" title="后台管理系统">后台管理</a>
     </div>
     <div class="stats" id="headerStats">
       <span class="spinner"
@@ -777,25 +862,25 @@
       </div>
     </div>
 
-    <!-- 分类筛选 -->
+    <!-- 场景分类 Tab 筛选 -->
     <div class="sb-section">
       <div class="sb-header" onclick="toggleSb('sbFilter')">
-        <span>&#x1F50D; 充电设施类型筛选</span><span class="sb-arrow" id="arrFilter">&#9660;</span>
+        <span>&#x1F4CD; 场景分类筛选</span><span class="sb-arrow" id="arrFilter">&#9660;</span>
       </div>
       <div class="sb-body" id="sbFilter">
-        <div id="catFilters"></div>
-        <button onclick="resetCatFilter()"
-          style="margin-top:6px;width:100%;padding:5px;border:1px solid #d0d7de;border-radius:5px;font-size:11px;background:#f8fafc;cursor:pointer;color:#2c3e50">重置全部显示</button>
+        <div id="catFilters" style="display:flex;flex-wrap:wrap;gap:5px;padding:4px 0"></div>
       </div>
     </div>
 
-    <!-- 图例 -->
+    <!-- 年份筛选 -->
     <div class="sb-section">
-      <div class="sb-header" onclick="toggleSb('sbLegend')">
-        <span>&#x1F4CC; 图例</span><span class="sb-arrow" id="arrLegend">&#9660;</span>
+      <div class="sb-header" onclick="toggleSb('sbYear')">
+        <span>&#x1F4C5; 规划年份筛选</span><span class="sb-arrow" id="arrYear">&#9660;</span>
       </div>
-      <div class="sb-body" id="sbLegend">
-        <div id="legendContent">加载中...</div>
+      <div class="sb-body" id="sbYear">
+        <div id="yearFilters"></div>
+        <button onclick="resetYearFilter()"
+          style="margin-top:6px;width:100%;padding:5px;border:1px solid #d0d7de;border-radius:5px;font-size:11px;background:#f8fafc;cursor:pointer;color:#2c3e50">重置年份筛选</button>
       </div>
     </div>
 
@@ -809,27 +894,54 @@
           style="width:100%;padding:8px;margin-bottom:6px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;">&#x1F5A8; 生成充电桩规划图</button>
         <button onclick="showServiceRadiusModal()"
           style="width:100%;padding:8px;margin-bottom:6px;background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;">&#x1F3AF; 生成服务半径图</button>
-        <button onclick="generateDynamicMap()"
+        <button id="btnGenerateDynamic" onclick="generateDynamicMap()"
           style="width:100%;padding:8px;margin-bottom:6px;background:linear-gradient(135deg,#06b6d4 0%,#3b82f6 100%);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;">&#x2795; 按照当前地图点位生成规划图</button>
+        <button id="btnGenCatTables" onclick="generateCategoryTables()"
+          style="width:100%;padding:8px;margin-bottom:4px;background:linear-gradient(135deg,#22c55e 0%,#15803d 100%);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;">&#x1F4CA; 生成类别统计表格（4张PNG）</button>
+        <button id="btnGenCatWord" onclick="generateCategoryWord()"
+          style="width:100%;padding:8px;margin-bottom:6px;background:linear-gradient(135deg,#2563eb 0%,#1e40af 100%);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;">&#x1F4D8; 生成类别统计 Word 文档</button>
+        <div id="catTablesResult" style="display:none;margin-top:6px;padding:6px 8px;background:#f0fdf4;border:1px solid #86efac;border-radius:4px;font-size:11px;"></div>
         <button onclick="openOutputFolder()"
-          style="width:100%;padding:8px;background:#34495e;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;">&#x1F4C2; 打开输出文件夹</button>
+          style="width:100%;padding:8px;margin-top:6px;background:#34495e;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;">&#x1F4C2; 打开输出文件夹</button>
         <div style="font-size:11px;color:#888;margin-top:6px;">提示：点击按钮查看详细操作说明</div>
       </div>
     </div>
 
-    <!-- 导出工具 -->
+    <!-- 数据调整 -->
     <div class="sb-section">
-      <div class="sb-header" onclick="toggleSb('sbExport')">
-        <span>&#x1F4F8; 导出截图</span><span class="sb-arrow" id="arrExport">&#9660;</span>
+      <div class="sb-header" onclick="toggleSb('sbDataEdit')">
+        <span>&#x1F6E0; 数据调整</span><span class="sb-arrow" id="arrDataEdit">&#9654;</span>
       </div>
-      <div class="sb-body" id="sbExport">
-        <button onclick="exportMapSnapshot('full')"
-          style="width:100%;padding:6px;margin-bottom:6px;background:#3498db;color:#fff;border:none;border-radius:4px;cursor:pointer;">&#x1F5BC; 导出完整合成图</button>
-        <button onclick="exportMapSnapshot('base')"
-          style="width:100%;padding:6px;margin-bottom:6px;background:#95a5a6;color:#fff;border:none;border-radius:4px;cursor:pointer;">&#x1F5FA; 仅导出底图与边界</button>
-        <button onclick="exportMapSnapshot('points')"
-          style="width:100%;padding:6px;background:#e67e22;color:#fff;border:none;border-radius:4px;cursor:pointer;">&#x1F4CD; 仅导出覆盖点位</button>
-        <div style="font-size:10px;color:#888;margin-top:6px;">提示：分别导出后可在 PPT 中叠加使用</div>
+      <div class="sb-body collapsed" id="sbDataEdit">
+        <select id="peCounty" style="width:100%;padding:6px;border:1px solid #d0d7de;border-radius:6px;font-size:12px;background:#fff;color:#2c3e50;margin-bottom:6px;">
+          <option value="yiyang">弋阳县</option>
+          <option value="wannian">万年县</option>
+          <option value="jian">吉安县</option>
+          <option value="suichuan">遂川县</option>
+          <option value="jian_suichuan">吉安/遂川联合</option>
+          <option value="all">弋阳/万年联合</option>
+        </select>
+        <select id="peYear" style="width:100%;padding:6px;border:1px solid #d0d7de;border-radius:6px;font-size:12px;background:#fff;color:#2c3e50;margin-bottom:6px;">
+          <option value="all">全部年份</option>
+          <option value="2026">2026</option>
+          <option value="2027">2027</option>
+          <option value="2028">2028</option>
+        </select>
+        <input id="peTownship" type="text" placeholder="乡镇筛选（可选）"
+          style="width:100%;padding:6px;border:1px solid #d0d7de;border-radius:6px;font-size:12px;background:#fff;color:#2c3e50;margin-bottom:6px;">
+        <input id="peKeyword" type="text" placeholder="站点名称关键词（可选）"
+          style="width:100%;padding:6px;border:1px solid #d0d7de;border-radius:6px;font-size:12px;background:#fff;color:#2c3e50;margin-bottom:6px;">
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+          <label style="font-size:11px;color:#6e7781;white-space:nowrap;">每页</label>
+          <input id="peLimit" type="number" min="1" max="300" value="100"
+            style="width:100%;padding:6px;border:1px solid #d0d7de;border-radius:6px;font-size:12px;background:#fff;color:#2c3e50;">
+        </div>
+        <button onclick="loadPlannedEditRows(true)"
+          style="width:100%;padding:8px;background:#1f6feb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;margin-bottom:6px;">查询规划记录</button>
+        <button onclick="openPlannedEditModal()"
+          style="width:100%;padding:8px;background:#374151;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500;">打开批量编辑面板</button>
+        <div id="peDirtyHint" style="margin-top:6px;font-size:11px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:4px 6px;display:none;">有 0 条修改待提交</div>
+        <div id="peStatus" style="margin-top:6px;font-size:11px;color:#6e7781;">未加载编辑数据</div>
       </div>
     </div>
 
@@ -903,6 +1015,183 @@ python generate_wannian_official.py</pre>
     </div>
   </div>
 
+  <!-- 规划表数据调整弹窗 -->
+  <div id="plannedEditModal" class="modal" style="z-index:10001">
+    <div id="plannedEditWindow" class="modal-content planned-edit-window">
+      <div id="plannedEditDragHandle" class="modal-header" style="margin-bottom:10px;">
+        <h2>&#x1F6E0; 规划表数据调整（stations_planned）</h2>
+        <span class="close-btn" onclick="closePlannedEditModal()">&times;</span>
+      </div>
+      <div class="modal-body" style="padding:0;line-height:1.5;display:flex;flex-direction:column;gap:8px;min-height:0;flex:1;">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:12px;flex-wrap:wrap;">
+          <div id="pePageInfo" style="color:#57606a;">总计 0 条，当前 0-0</div>
+          <div id="peModalDirty" style="color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:4px 8px;display:none;">有 0 条修改待提交</div>
+          <div style="display:flex;gap:6px;">
+            <button id="pePrevBtn" onclick="plannedEditPrevPage()" class="modal-btn modal-btn-secondary" style="padding:6px 10px;">上一页</button>
+            <button id="peNextBtn" onclick="plannedEditNextPage()" class="modal-btn modal-btn-secondary" style="padding:6px 10px;">下一页</button>
+          </div>
+        </div>
+        <div style="border:1px solid #d0d7de;border-radius:8px;overflow:auto;flex:1;min-height:260px;">
+          <table class="pe-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>县</th>
+                <th>站点名称</th>
+                <th>乡镇</th>
+                <th>年份</th>
+                <th>场景</th>
+                <th>数量</th>
+                <th>功率(kW)</th>
+                <th>类别</th>
+                <th>类别编码</th>
+                <th>配电设备</th>
+                <th>经度</th>
+                <th>纬度</th>
+              </tr>
+            </thead>
+            <tbody id="peTableBody">
+              <tr><td colspan="13" style="text-align:center;color:#6e7781;padding:20px;">尚未加载数据</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="peSubmitResult" style="font-size:12px;color:#57606a;min-height:18px;"></div>
+      </div>
+      <div class="modal-footer" style="margin-top:8px;padding-top:10px;">
+        <button class="modal-btn modal-btn-secondary" onclick="discardPlannedEdits()">撤销未提交修改</button>
+        <button class="modal-btn modal-btn-primary" onclick="submitPlannedEdits()">批量提交</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 动态规划图预览弹窗 -->
+  <div id="dynamicMapModal" class="modal" style="z-index:9999">
+    <div class="modal-content" style="max-width:96vw;width:960px;max-height:92vh;display:flex;flex-direction:column;">
+      <div class="modal-header">
+        <h2>&#x1F5FA; 规划图预览</h2>
+        <span class="close-btn" onclick="closeModal('dynamicMapModal')">&times;</span>
+      </div>
+      <div class="modal-body" style="padding:10px 16px;overflow-y:auto;flex:1;min-height:0;">
+        <div id="dynamicMapInfo" style="font-size:12px;color:#57606a;margin-bottom:6px"></div>
+
+        <!-- 框选工具栏 -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+          <span style="font-size:12px;color:#555;">在预览图上框选放置位置：</span>
+          <button id="btn-draw-stats" onclick="startImgDraw('stats')"
+            style="padding:4px 10px;font-size:12px;background:#3498db;color:#fff;border:none;border-radius:4px;cursor:pointer;">
+            &#x1F4CA; 框选统计表
+          </button>
+          <span id="stats-draw-status" style="font-size:11px;color:#aaa;">未设置</span>
+          <button id="btn-clear-stats-draw" onclick="clearImgRect('stats')"
+            style="display:none;padding:2px 7px;font-size:11px;background:#e74c3c;color:#fff;border:none;border-radius:4px;cursor:pointer;">✕</button>
+
+          <span style="color:#ddd;margin:0 2px;">|</span>
+
+          <button id="btn-draw-legend" onclick="startImgDraw('legend')"
+            style="padding:4px 10px;font-size:12px;background:#e67e22;color:#fff;border:none;border-radius:4px;cursor:pointer;">
+            &#x1F5FA; 框选图例
+          </button>
+          <span id="legend-draw-status" style="font-size:11px;color:#aaa;">未设置</span>
+          <button id="btn-clear-legend-draw" onclick="clearImgRect('legend')"
+            style="display:none;padding:2px 7px;font-size:11px;background:#e74c3c;color:#fff;border:none;border-radius:4px;cursor:pointer;">✕</button>
+
+          <button id="btn-regen" onclick="regenWithRects()" disabled
+            style="margin-left:auto;padding:4px 14px;font-size:12px;background:#27ae60;color:#fff;border:none;border-radius:4px;cursor:not-allowed;opacity:0.5;">
+            &#x21BA; 重新生成
+          </button>
+        </div>
+
+        <!-- 图片容器（支持框选） -->
+        <div id="img-draw-container" style="position:relative;display:inline-block;width:100%;text-align:center;user-select:none;">
+          <img id="dynamicMapImg" src="" alt="规划图"
+            style="max-width:100%;max-height:58vh;border:1px solid #d0d7de;border-radius:4px;display:block;margin:0 auto;pointer-events:none;">
+          <!-- 框选捕获层（覆盖图片） -->
+          <div id="img-draw-overlay" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;z-index:10;"></div>
+          <!-- 统计表框 -->
+          <div id="stats-rect-box" style="display:none;position:absolute;border:2px solid #3498db;background:rgba(52,152,219,0.08);pointer-events:none;z-index:11;box-sizing:border-box;">
+            <span style="position:absolute;top:2px;left:4px;font-size:11px;color:#3498db;font-weight:bold;">统计表</span>
+          </div>
+          <!-- 图例框 -->
+          <div id="legend-rect-box" style="display:none;position:absolute;border:2px solid #e67e22;background:rgba(230,126,34,0.08);pointer-events:none;z-index:11;box-sizing:border-box;">
+            <span style="position:absolute;top:2px;left:4px;font-size:11px;color:#e67e22;font-weight:bold;">图例</span>
+          </div>
+          <!-- 橡皮筋框 -->
+          <div id="img-rubber-band" style="display:none;position:absolute;border:2px dashed #888;pointer-events:none;z-index:12;box-sizing:border-box;"></div>
+          <!-- 选区放大预览 canvas -->
+          <canvas id="selection-preview-canvas" width="280" height="280"
+            style="display:none;position:fixed;border:2px solid #333;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,0.5);z-index:9999;background:#fff;pointer-events:none;"></canvas>
+          <!-- 操作提示 -->
+          <div id="img-draw-tip" style="display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:#fff;padding:5px 14px;border-radius:16px;font-size:12px;pointer-events:none;z-index:13;white-space:nowrap;"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-secondary" onclick="closeModal('dynamicMapModal')">关闭</button>
+        <a id="dynamicMapDownload" href="" download
+          style="display:inline-block;padding:8px 18px;background:#1f6feb;color:#fff;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;cursor:pointer;">
+          &#x2B07; 下载 PNG
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 坐标调整弹窗 -->
+  <div id="coordEditorModal" class="modal" style="z-index:10000;">
+    <div class="modal-content" style="max-width:98vw;width:1100px;max-height:92vh;display:flex;flex-direction:column;">
+      <div class="modal-header">
+        <h2>&#x1F4CD; 坐标调整</h2>
+        <span class="close-btn" onclick="closeCoordEditor()">&times;</span>
+      </div>
+      <div style="padding:8px 16px;background:#fff3cd;border-bottom:1px solid #ffc107;font-size:12px;color:#856404;">
+        &#x26A0; 使用方式：从左侧列表点击一个站点 → 右侧地图上点击正确位置 → 点击「保存此点」。
+        所有修改完成后点击「保存全部」写入数据库。
+      </div>
+      <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
+        <!-- 左侧站点列表 -->
+        <div style="width:300px;min-width:300px;display:flex;flex-direction:column;border-right:1px solid #d0d7de;">
+          <div style="padding:8px;border-bottom:1px solid #eee;display:flex;gap:6px;align-items:center;">
+            <select id="ceCountySel" onchange="loadCoordEditorList()"
+              style="flex:1;padding:4px;font-size:12px;border:1px solid #ccc;border-radius:4px;">
+              <option value="yiyang">弋阳县</option>
+              <option value="wannian">万年县</option>
+              <option value="jian" selected>吉安县</option>
+              <option value="suichuan">遂川县</option>
+            </select>
+            <select id="ceTypeSel" onchange="renderCoordList()"
+              style="padding:4px;font-size:12px;border:1px solid #ccc;border-radius:4px;">
+              <option value="all">全部</option>
+              <option value="plan">规划站</option>
+              <option value="urban">现有站</option>
+            </select>
+          </div>
+          <div style="padding:6px 8px;border-bottom:1px solid #eee;">
+            <input id="ceSearch" type="text" placeholder="搜索站名…"
+              oninput="renderCoordList()"
+              style="width:100%;box-sizing:border-box;padding:4px 6px;font-size:12px;border:1px solid #ccc;border-radius:4px;">
+          </div>
+          <div id="ceList" style="flex:1;overflow-y:auto;font-size:12px;"></div>
+          <div style="padding:8px;border-top:1px solid #eee;font-size:11px;color:#888;" id="ceStatus">未选择站点</div>
+        </div>
+        <!-- 右侧地图 -->
+        <div style="flex:1;position:relative;">
+          <div id="ceMap" style="width:100%;height:100%;"></div>
+          <div id="ceMapTip" style="display:none;position:absolute;top:10px;left:50%;transform:translateX(-50%);
+            background:rgba(142,68,173,0.9);color:#fff;padding:6px 16px;border-radius:20px;font-size:13px;pointer-events:none;z-index:100;white-space:nowrap;">
+            点击地图为「<span id="ceTipName"></span>」选择新位置
+          </div>
+          <!-- 暂存修改提示 -->
+          <div id="cePendingBar" style="display:none;position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
+            background:#fff;border:1px solid #ccc;border-radius:8px;padding:6px 14px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,0.15);z-index:100;display:flex;gap:8px;align-items:center;">
+            <span id="cePendingCount">0 处修改待保存</span>
+            <button onclick="saveAllCoordEdits()"
+              style="padding:4px 12px;background:#27ae60;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">保存全部</button>
+            <button onclick="clearAllCoordEdits()"
+              style="padding:4px 10px;background:#e74c3c;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">撤销</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 右下角统计 -->
   <div id="stats-panel">
     <div class="stats-title">&#x1F4CA; 弋阳县充电设施概况</div>
@@ -923,6 +1212,21 @@ python generate_wannian_official.py</pre>
     function switchCounty(county) {
       CURRENT_COUNTY = county;
       console.log('切换到：', county);
+      syncPlannedEditFilters();
+
+      // 切换县时自动定位地图中心
+      if (map) {
+        var _countyCenter = {
+          yiyang:       [117.44, 28.37, 11],
+          wannian:      [117.07, 28.69, 11],
+          jian:         [114.88, 27.10, 10],
+          suichuan:     [114.52, 26.32, 10],
+          jian_suichuan:[114.71, 26.68,  9],
+          all:          [117.26, 28.55, 10],
+        };
+        var cc = _countyCenter[county];
+        if (cc) map.centerAndZoom(new T.LngLat(cc[0], cc[1]), cc[2]);
+      }
 
       // 重新加载数据
       loadAllData();
@@ -937,7 +1241,8 @@ python generate_wannian_official.py</pre>
     var BOUNDARY = [];
     var TOWNSHIP_DATA = null;
     var allPlannedData = [];   // 全量规划站数据，用于类型筛选
-    var activeCats = null;     // null = 全部显示
+    var activeCats = null;     // null = 全部显示；array of scene strings = 按场景过滤
+    var activeYear = null;     // null = 全部显示
     var rawData = {             // 保存原始数据用于导出
       urban: [],
       gas: [],
@@ -948,6 +1253,9 @@ python generate_wannian_official.py</pre>
     var customPlannedPoints = [];  // 存储自定义规划点数据
     var customPlanningMode = false; // 是否处于自定义规划模式
     var customMarkers = [];        // 存储自定义标记对象
+    var plannedEditState = { rows: [], dirty: {}, limit: 100, offset: 0, total: 0 };
+    var PLANNED_EDIT_NUMERIC_FIELDS = ['year', 'quantity', 'power_kw', 'category_code', 'longitude', 'latitude'];
+    var plannedEditDragState = { inited: false, dragging: false, startX: 0, startY: 0, baseLeft: 0, baseTop: 0 };
 
     // ===== 导出截图逻辑 =====
     function exportMapSnapshot(mode) {
@@ -1072,7 +1380,17 @@ python generate_wannian_official.py</pre>
       }
       mapContainer.appendChild(titleDiv);
 
-      // 4. 略微延迟以等待图层刷新、瓦片加载以及 CSS 生效
+      // 5. 导出规划图时，临时将规划点改为红色
+      var planColorBackup = null;
+      if (mode === 'full' || mode === 'points') {
+        planColorBackup = {};
+        [1, 2, 3, 4].forEach(function(c) { planColorBackup[c] = CAT_STYLES[c].fill; CAT_STYLES[c].fill = '#FF0000'; });
+        layers.plan.forEach(function(mk) {
+          mk.setIcon(mkGisIcon(mk._gisCode || 1, mk._gisQty || 0, mk._gisYear || null));
+        });
+      }
+
+      // 6. 略微延迟以等待图层刷新、瓦片加载以及 CSS 生效
       setTimeout(function () {
         var cropX = rect.left + window.scrollX + offsetX;
         var cropY = rect.top + window.scrollY + offsetY;
@@ -1116,6 +1434,14 @@ python generate_wannian_official.py</pre>
             maskOverlay.setFillOpacity(oldMaskOpacity);
           }
 
+          // 恢复规划点原始颜色
+          if (planColorBackup) {
+            [1, 2, 3, 4].forEach(function(c) { CAT_STYLES[c].fill = planColorBackup[c]; });
+            layers.plan.forEach(function(mk) {
+              mk.setIcon(mkGisIcon(mk._gisCode || 1, mk._gisQty || 0, mk._gisYear || null));
+            });
+          }
+
           // 触发下载
           var link = document.createElement('a');
           link.download = 'map_export_' + mode + '_' + new Date().getTime() + '.png';
@@ -1125,6 +1451,13 @@ python generate_wannian_official.py</pre>
           // 异常回调也要清理节点
           if (titleDiv && titleDiv.parentNode) titleDiv.parentNode.removeChild(titleDiv);
           if (exportBorder && exportBorder.parentNode) exportBorder.parentNode.removeChild(exportBorder);
+          // 异常时也要恢复规划点颜色
+          if (planColorBackup) {
+            [1, 2, 3, 4].forEach(function(c) { CAT_STYLES[c].fill = planColorBackup[c]; });
+            layers.plan.forEach(function(mk) {
+              mk.setIcon(mkGisIcon(mk._gisCode || 1, mk._gisQty || 0, mk._gisYear || null));
+            });
+          }
           alert('截图导出失败：' + err.message);
         });
       }, 1000);
@@ -1139,60 +1472,141 @@ python generate_wannian_official.py</pre>
       if (arr) arr.innerHTML = collapsed ? '&#9654;' : '&#9660;';
     }
 
-    // ===== 分类筛选 =====
-    function buildCatFilters() {
-      var cats = [
-        { code: 0, fill: '#003399', label: '现状公共充电站' },
-        { code: 1, fill: '#F59E0B', label: '规划·公共充电设施' },
-        { code: 2, fill: '#B45309', label: '规划·专用充电设施' },
-        { code: 3, fill: '#16A34A', label: '规划·农村普惠设施' },
-        { code: 4, fill: '#7C3AED', label: '规划·旅游景区设施' },
-        { code: 5, fill: '#DC2626', label: '综合能源站' },
-      ];
-      var html = '';
-      cats.forEach(function (c) {
-        html += '<div class="layer-row" style="padding:5px 0">' +
-          '<div class="layer-info">' +
-          '<div style="width:12px;height:12px;border-radius:50%;background:' + c.fill + ';flex-shrink:0"></div>' +
-          '<span style="font-size:11px">' + c.label + '</span></div>' +
-          '<label class="toggle" style="--c:' + c.fill + '">' +
-          '<input type="checkbox" id="cf_' + c.code + '" checked onchange="applyCatFilter()">' +
-          '<span class="slider"></span></label></div>';
+    // ===== 场景分类 Tab 筛选（固定4类 + 基础数据）=====
+    var CAT_TABS = [
+      { label: '基础数据', cat: null },
+      { label: '全域旅游', cat: '全域旅游' },
+      { label: '交能融合', cat: '交能融合' },
+      { label: '零碳园区', cat: '零碳园区' },
+      { label: '乡村振兴', cat: '乡村振兴' },
+    ];
+
+    function buildCatFilters(stations) {
+      var container = document.getElementById('catFilters');
+      // 统计每个 tab 的点位数
+      var counts = {};
+      CAT_TABS.forEach(function(t) { counts[t.cat || '__all__'] = 0; });
+      (stations || allPlannedData).forEach(function(d) {
+        counts['__all__']++;
+        if (d.category && counts.hasOwnProperty(d.category)) counts[d.category]++;
       });
-      document.getElementById('catFilters').innerHTML = html;
+
+      var html = '';
+      CAT_TABS.forEach(function(t, idx) {
+        var active = idx === 0 ? 'scene-tab-active' : '';
+        var cnt = t.cat ? counts[t.cat] : counts['__all__'];
+        html += '<button class="scene-tab ' + active + '" data-cat="' + (t.cat || '') + '" onclick="selectSceneTab(this)">'
+              + t.label + '<span style="font-size:10px;opacity:.7;margin-left:3px">(' + cnt + ')</span></button>';
+      });
+      container.innerHTML = html;
     }
 
-    function applyCatFilter() {
-      var checked = [];
-      for (var i = 0; i <= 5; i++) {
-        var cb = document.getElementById('cf_' + i);
-        if (cb && cb.checked) checked.push(i);
+    function selectSceneTab(btn) {
+      document.querySelectorAll('#catFilters .scene-tab').forEach(function(b) {
+        b.classList.remove('scene-tab-active');
+      });
+      btn.classList.add('scene-tab-active');
+
+      // 场景筛选仅作用于规划点，点击场景时自动启用规划图层，
+      // 避免“地图已显示点位但导出因 cb_plan=false 被过滤”的不一致。
+      var cbPlan = document.getElementById('cb_plan');
+      if (cbPlan && !cbPlan.checked) cbPlan.checked = true;
+
+      var cat = btn.dataset.cat || null;
+      activeCats = cat ? [cat] : null;
+
+      layers.plan.forEach(function(mk) { map.removeOverLay(mk); });
+      layers.radius_planned.forEach(function(c) { map.removeOverLay(c); });
+      layers.plan = []; layers.radius_planned = [];
+
+      var base = (activeYear !== null)
+        ? allPlannedData.filter(function(d) { return d.year === activeYear; })
+        : allPlannedData;
+
+      var filtered = cat ? base.filter(function(d) { return d.category === cat; }) : base;
+      plotPlan(filtered);
+      refreshDisplayedStats(filtered.length);
+    }
+
+    function applyCatFilter() { /* 兼容旧调用 */ }
+
+    function resetCatFilter() {
+      var first = document.querySelector('#catFilters .scene-tab');
+      if (first) selectSceneTab(first);
+    }
+
+    // ===== 年份筛选 =====
+    function buildYearFilters() {
+      var years = [
+        { year: 'all', label: '全部年份', color: '#6B7280' },
+        { year: 2026, label: '2026年', color: '#2563EB' },
+        { year: 2027, label: '2027年', color: '#10B981' },
+        { year: 2028, label: '2028年', color: '#F59E0B' }
+      ];
+      var html = '';
+      years.forEach(function (y, index) {
+        var isFirst = index === 0;
+        html += '<div class="layer-row" style="padding:5px 0">' +
+          '<div class="layer-info">' +
+          '<div style="width:12px;height:12px;border-radius:50%;background:' + y.color + ';flex-shrink:0"></div>' +
+          '<span style="font-size:11px">' + y.label + '</span></div>' +
+          '<label class="toggle" style="--c:' + y.color + '">' +
+          '<input type="radio" name="yearFilter" id="yf_' + y.year + '" ' + (isFirst ? 'checked' : '') + ' onchange="applyYearFilter()">' +
+          '<span class="slider"></span></label></div>';
+      });
+      document.getElementById('yearFilters').innerHTML = html;
+    }
+
+    function applyYearFilter() {
+      var selectedYear = null;
+      // 获取选中的年份
+      var radios = document.getElementsByName('yearFilter');
+      for (var i = 0; i < radios.length; i++) {
+        if (radios[i].checked) {
+          var val = radios[i].id.replace('yf_', '');
+          selectedYear = val === 'all' ? null : parseInt(val);
+          break;
+        }
       }
-      activeCats = checked;
+      activeYear = selectedYear;
+      syncPlannedEditFilters();
 
       // 重绘规划点
       layers.plan.forEach(function (mk) { map.removeOverLay(mk); });
       layers.radius_planned.forEach(function (c) { map.removeOverLay(c); });
       layers.plan = []; layers.radius_planned = [];
 
-      var filtered = allPlannedData.filter(function (d) {
-        return activeCats.indexOf(d.category_code || 1) >= 0;
-      });
-      plotPlan(filtered);
+      // 先按年份筛选，再按类型筛选
+      var yearFiltered = allPlannedData;
+      if (activeYear !== null) {
+        yearFiltered = allPlannedData.filter(function (d) {
+          return d.year === activeYear;
+        });
+      }
 
-      // 现状站和加油站
-      var showUrban = checked.indexOf(0) >= 0;
-      layers.urban.forEach(function (mk) { showUrban ? map.addOverLay(mk) : map.removeOverLay(mk); });
-      var showGas = checked.indexOf(5) >= 0;
-      layers.gas.forEach(function (mk) { showGas ? map.addOverLay(mk) : map.removeOverLay(mk); });
+      // 再按大类筛选（activeCats = [cat字符串] 或 null=全部）
+      var finalFiltered = yearFiltered;
+      if (activeCats !== null && activeCats.length > 0) {
+        finalFiltered = yearFiltered.filter(function(d) {
+          return activeCats.indexOf(d.category || '') >= 0;
+        });
+      }
+
+      // 规划图层关闭时，不显示规划点，避免与复选框状态不一致
+      var cbPlan = document.getElementById('cb_plan');
+      if (cbPlan && !cbPlan.checked) {
+        refreshDisplayedStats(0);
+        return;
+      }
+
+      plotPlan(finalFiltered);
+      refreshDisplayedStats(finalFiltered.length);
     }
 
-    function resetCatFilter() {
-      for (var i = 0; i <= 5; i++) {
-        var cb = document.getElementById('cf_' + i);
-        if (cb) cb.checked = true;
-      }
-      applyCatFilter();
+    function resetYearFilter() {
+      var radioAll = document.getElementById('yf_all');
+      if (radioAll) radioAll.checked = true;
+      applyYearFilter();
     }
 
 
@@ -1235,20 +1649,28 @@ python generate_wannian_official.py</pre>
         // 6. 构建控制面板（从配置动态生成）
         buildModeButtons(CFG.modes);
         buildLayerToggles(CFG.styles);
-        buildLegend(CFG.styles);
-        buildCatFilters();
+        buildYearFilters();
+        syncPlannedEditFilters();
+        // buildCatFilters 在数据加载后调用（需要 scene 列表）
 
         // 7. 初始化地图
         initMap();
 
         // 8. 绑定数据
         allPlannedData = planned.stations;  // 缓存全量数据供筛选使用
+        activeCats = null;
+        buildCatFilters(planned.stations);  // 根据 scene 动态构建筛选项
         rawData.urban = urban.stations;
         rawData.gas = gas.stations;
         rawData.plan = planned.stations;
         plotUrban(urban.stations);
         plotGas(gas.stations);
         plotPlan(planned.stations);
+
+        // 设置初始显示的规划站点数量
+        currentDisplayedPlanned = planned.stations.length;
+        // 刷新统计面板
+        refreshDisplayedStats(planned.stations.length);
 
 
         // 9. 绘制乡镇边界 + 标注（从Shapefile API获取）
@@ -1299,8 +1721,68 @@ python generate_wannian_official.py</pre>
       console.log('切换县域：', CURRENT_COUNTY);
       clearAllLayers();
 
+      // 先清空旧数据，防止 resetCatFilter 重绘旧县点位
+      allPlannedData = [];
+      rawData.urban = []; rawData.gas = []; rawData.plan = [];
+
+      // 重置年份筛选为"全部年份"
+      var radioAll = document.getElementById('yf_all');
+      if (radioAll) radioAll.checked = true;
+      activeYear = null;
+      syncPlannedEditFilters();
+
+      // 重置类型筛选为全部显示
+      resetCatFilter();
+
+      // 吉安+遂川联合模式
+      if (CURRENT_COUNTY === 'jian_suichuan') {
+        Promise.all([
+          fetchJSON('/api/boundary?county=jian'),
+          fetchJSON('/api/boundary?county=suichuan'),
+          fetchJSON('/api/stations/urban?county=jian_suichuan'),
+          fetchJSON('/api/stations/gas?county=jian_suichuan'),
+          fetchJSON('/api/stations/planned?county=jian_suichuan'),
+          fetchJSON('/api/stats?county=jian_suichuan'),
+          fetchJSON('/api/townships?county=jian_suichuan'),
+        ]).then(function (results) {
+          var bjian = results[0], bsuichuan = results[1];
+          var urban = results[2], gas = results[3], planned = results[4];
+          var stats = results[5], townships = results[6];
+
+          console.log('✓ 吉安/遂川联合 充电站:', urban.count, gas.count, planned.count);
+          document.getElementById('headerStats').innerHTML = '充电站 <b>' + urban.count + '</b> 加油站 <b>' + gas.count + '</b> 规划 <b>' + planned.count + '</b>';
+          updateStatsPanel(stats, urban.count, gas.count, planned.count);
+
+          allPlannedData = planned.stations;
+          activeCats = null;
+          buildCatFilters(planned.stations);
+          rawData.urban = urban.stations;
+          rawData.gas = gas.stations;
+          rawData.plan = planned.stations;
+
+          // 合并两县边界
+          var multiPolygon = [];
+          if (bjian && bjian.boundary && bjian.boundary.length) multiPolygon.push(bjian.boundary);
+          if (bsuichuan && bsuichuan.boundary && bsuichuan.boundary.length) multiPolygon.push(bsuichuan.boundary);
+          if (multiPolygon.length > 0) drawUnifiedMultiPolygon(multiPolygon);
+
+          if (urban.count > 0) plotUrban(urban.stations);
+          if (gas.count > 0) plotGas(gas.stations);
+          if (planned.count > 0) plotPlan(planned.stations);
+
+          currentDisplayedPlanned = planned.stations.length;
+          refreshDisplayedStats(planned.stations.length);
+
+          if (townships && townships.townships) addTownshipLabels(townships.townships);
+
+          setTimeout(function () {
+            var standardBtn = document.querySelector('.mode-btn[onclick*="standard"]');
+            if (standardBtn) setMode(standardBtn, 'standard');
+          }, 100);
+        }).catch(function (err) { console.error('✗', err); });
+
       // 两县联合模式：把两县当作一个整体处理
-      if (CURRENT_COUNTY === 'all') {
+      } else if (CURRENT_COUNTY === 'all') {
         Promise.all([
           fetchJSON('/api/boundary/all'),
           fetchJSON('/api/stations/urban?county=all'),
@@ -1321,6 +1803,14 @@ python generate_wannian_official.py</pre>
           console.log('✓ 两县联合 边界：弋阳', boundaries.yiyang?.count || 0, '万年', boundaries.wannian?.count || 0, '充电站:', urban.count, gas.count, planned.count);
           document.getElementById('headerStats').innerHTML = '充电站 <b>' + urban.count + '</b> 加油站 <b>' + gas.count + '</b> 规划 <b>' + planned.count + '</b>';
           updateStatsPanel(stats, urban.count, gas.count, planned.count);
+
+          // 更新数据缓存
+          allPlannedData = planned.stations;  // 缓存全量数据供筛选使用
+          activeCats = null;
+          buildCatFilters(planned.stations);
+          rawData.urban = urban.stations;
+          rawData.gas = gas.stations;
+          rawData.plan = planned.stations;
 
           // 合并两县边界为 MultiPolygon（作为一个整体）
           var multiPolygon = [];
@@ -1344,6 +1834,10 @@ python generate_wannian_official.py</pre>
           if (urban.count > 0) plotUrban(urban.stations);
           if (gas.count > 0) plotGas(gas.stations);
           if (planned.count > 0) plotPlan(planned.stations);
+
+          // 设置当前显示的规划站点数量
+          currentDisplayedPlanned = planned.stations.length;
+          refreshDisplayedStats(planned.stations.length);
 
           // 绘制两县乡镇标注
           if (townshipsYiyang && townshipsYiyang.townships) {
@@ -1382,11 +1876,23 @@ python generate_wannian_official.py</pre>
           document.getElementById('headerStats').innerHTML = '充电站 <b>' + urban.count + '</b> 加油站 <b>' + gas.count + '</b> 规划 <b>' + planned.count + '</b>';
           updateStatsPanel(stats, urban.count, gas.count, planned.count);
           if (BOUNDARY.length > 0) createCountyHighlight(BOUNDARY);
-          
+
+          // 更新数据缓存
+          allPlannedData = planned.stations;  // 缓存全量数据供筛选使用
+          activeCats = null;
+          buildCatFilters(planned.stations);
+          rawData.urban = urban.stations;
+          rawData.gas = gas.stations;
+          rawData.plan = planned.stations;
+
           // 根据当前选择的县来决定显示哪些数据
           if (urban.count > 0) plotUrban(urban.stations);
           if (gas.count > 0) plotGas(gas.stations);
           if (planned.count > 0) plotPlan(planned.stations);
+
+          // 设置当前显示的规划站点数量
+          currentDisplayedPlanned = planned.stations.length;
+          refreshDisplayedStats(planned.stations.length);
 
           // 绘制乡镇边界（如果有数据）
           if (townshipBounds && townshipBounds.geojson && townshipBounds.count > 0) {
@@ -1598,8 +2104,8 @@ python generate_wannian_official.py</pre>
 
     // 根据缩放系数更新所有 marker 图标大小
     function updateAllMarkerSizes(scale) {
-      // 基础尺寸缩小到 16×20，zoom 11-12 时为实际渲染大小
-      var W0 = 16, H0 = 20;
+      // 基础尺寸缩小到 10×13（缩小三分之一），zoom 11-12 时为实际渲染大小
+      var W0 = 10, H0 = 13;
       var W = Math.round(W0 * scale), H = Math.round(H0 * scale);
 
       // 遍历每个 marker，重新生成缩放后的图标
@@ -1766,14 +2272,14 @@ python generate_wannian_official.py</pre>
     };
     var YEAR_COLOR = { 2026: '#1E3A8A', 2027: '#2563EB', 2028: '#93C5FD' };
 
-    // mkGisIcon：生成规划圆形图标（默认基础尺寸）
+    // mkGisIcon：生成规划圆形图标（默认基础尺寸，缩小三分之一）
     function mkGisIcon(code, qty, year) {
-      return mkGisIconSized(code, qty, year, 14, 14);
+      return mkGisIconSized(code, qty, year, 9, 9);
     }
 
     // 支持自定义尺寸的规划圆形图标（带外围扁平化光晕扩散效果 + 层级大小区分）
     function mkGisIconSized(code, qty, year, W, H) {
-      W = W || 14; H = H || 14;
+      W = W || 9; H = H || 9;
 
       // 区分大小：现状公共站、规划公共站、综合能源站视觉上放大 30% 突出显示
       if (code === 0 || code === 1 || code === 5) {
@@ -1810,8 +2316,10 @@ python generate_wannian_official.py</pre>
 
 
     function mkIcon(color, text, size) {
-      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + (size + 8) + '" height="' + (size + 12) + '" viewBox="0 0 ' + (size + 8) + ' ' + (size + 12) + '"><circle cx="' + ((size + 8) / 2) + '" cy="' + ((size + 4) / 2) + '" r="' + (size / 2 + 1) + '" fill="' + color + '" stroke="white" stroke-width="2.5"/><text x="50%" y="' + ((size + 4) / 2) + '" text-anchor="middle" dy=".35em" font-size="' + Math.floor(size * 0.55) + '" fill="white">' + text + '</text></svg>';
-      return new T.Icon({ iconUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg), iconSize: new T.Point(size + 8, size + 12), iconAnchor: new T.Point((size + 8) / 2, (size + 8) / 2) });
+      // 将size缩小三分之一
+      var newSize = Math.round(size * 0.67);
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + (newSize + 8) + '" height="' + (newSize + 12) + '" viewBox="0 0 ' + (newSize + 8) + ' ' + (newSize + 12) + '"><circle cx="' + ((newSize + 8) / 2) + '" cy="' + ((newSize + 4) / 2) + '" r="' + (newSize / 2 + 1) + '" fill="' + color + '" stroke="white" stroke-width="2.5"/><text x="50%" y="' + ((newSize + 4) / 2) + '" text-anchor="middle" dy=".35em" font-size="' + Math.floor(newSize * 0.55) + '" fill="white">' + text + '</text></svg>';
+      return new T.Icon({ iconUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg), iconSize: new T.Point(newSize + 8, newSize + 12), iconAnchor: new T.Point((newSize + 8) / 2, (newSize + 8) / 2) });
     }
 
     // ===== 绘制标注点 =====
@@ -1825,7 +2333,7 @@ python generate_wannian_official.py</pre>
         circle.addEventListener('click', function () {
           openInfo(d.lng, d.lat, '<div class="info-window"><div class="info-title">&#128506; 服务范围 (现有)</div><div class="info-row">站点：<b>' + d.name + '</b></div><div class="info-row">覆盖半径：<b>5 公里</b></div></div>');
         });
-        map.addOverLay(circle);
+        // 默认不显示服务半径，只添加到数组中
         layers.radius_existing.push(circle);
         var mk = new T.Marker(new T.LngLat(d.lng, d.lat), { icon: mkGisIcon(0, 0, null) });
         mk._gisCode = 0; mk._gisQty = 0; mk._gisYear = null;
@@ -1877,19 +2385,19 @@ python generate_wannian_official.py</pre>
         circle.addEventListener('click', function () {
           openInfo(lng, lat, '<div class="info-window"><div class="info-title">&#128506; 服务范围 (规划)</div><div class="info-row">站点：<b>' + d.name + '</b></div><div class="info-row">覆盖半径：<b>5 公里</b></div></div>');
         });
-        map.addOverLay(circle);
+        // 默认不显示服务半径，只添加到数组中
         layers.radius_planned.push(circle);
 
         var catCode = d.category_code || 1;
         var st = CAT_STYLES[catCode] || CAT_STYLES[1];
-        var mk = new T.Marker(new T.LngLat(lng, lat), { icon: mkGisIcon(catCode, d.qty, d.year) });
+        var mk = new T.Marker(new T.LngLat(lng, lat), { icon: mkGisIcon(1, d.qty, d.year) });
         mk._gisCode = catCode; mk._gisQty = d.qty; mk._gisYear = d.year;
         mk._gisName = d.name;
         mk.addEventListener('click', function () {
           openInfo(lng, lat,
-            '<div class="info-window"><div class="info-title" style="color:' + st.fill + '">' + st.sym + ' ' + d.name + '</div>' +
+            '<div class="info-window"><div class="info-title" style="color:#2563EB">&#9679; ' + d.name + '</div>' +
             '<div class="info-row">&#127968; 乡镇：<b>' + d.township + '</b></div>' +
-            '<div class="info-row"><span class="badge" style="background:#EFF6FF;color:' + st.fill + ';border:1px solid ' + st.fill + '">' + (d.category || '公共充电设施') + '</span>' +
+            '<div class="info-row"><span class="badge" style="background:#EFF6FF;color:#2563EB;border:1px solid #2563EB">' + (d.scene || d.category || '公共充电设施') + '</span>' +
             '&nbsp;<span class="badge badge-blue">&#128197; ' + d.year + ' 年</span></div>' +
             '<div class="info-row">&#128268; 桩数：<b>' + d.qty + ' 台</b>&nbsp; &#9889; 功率：<b>' + d.power + ' kW</b></div>' +
             '</div>'
@@ -2102,8 +2610,8 @@ python generate_wannian_official.py</pre>
         { key: 'urban', label: styles.station_existing.label, color: styles.station_existing.color, fn: "toggleLayer('urban',this.checked)" },
         { key: 'gas', label: styles.gas_station.label, color: styles.gas_station.color, fn: "toggleLayer('gas',this.checked)" },
         { key: 'plan', label: styles.station_planned.label, color: styles.station_planned.color, fn: "toggleLayer('plan',this.checked)" },
-        { key: 'radius_existing', label: styles.radius_existing.label, color: styles.radius_existing.color, fn: "toggleLayer('radius_existing',this.checked)" },
-        { key: 'radius_planned', label: styles.radius_planned.label, color: styles.radius_planned.color, fn: "toggleLayer('radius_planned',this.checked)" },
+        { key: 'radius_existing', label: styles.radius_existing.label, color: styles.radius_existing.color, fn: "toggleLayer('radius_existing',this.checked)", checked: false },
+        { key: 'radius_planned', label: styles.radius_planned.label, color: styles.radius_planned.color, fn: "toggleLayer('radius_planned',this.checked)", checked: false },
         { key: 'boundary', label: '县域边界', color: styles.county_boundary.stroke_color, fn: "toggleBoundary(this.checked)" },
         { key: 'hide_outside', label: '隐藏县外地图', color: '#95a5a6', fn: "toggleHideOutside(this.checked)", checked: false }
       ];
@@ -2138,20 +2646,39 @@ python generate_wannian_official.py</pre>
 
 
 
+    // 全局变量：保存原始数据用于统计
+    var rawStatsData = { stats: {}, urbanCount: 0, gasCount: 0, plannedCount: 0 };
+    var currentDisplayedPlanned = 0;
+
     function updateStatsPanel(stats, urbanCount, gasCount, plannedCount) {
+      // 保存原始数据
+      rawStatsData = { stats: stats, urbanCount: urbanCount, gasCount: gasCount, plannedCount: plannedCount };
+
       // 动态更新面板标题
-      var countyName = CURRENT_COUNTY === 'yiyang' ? '弋阳县' : (CURRENT_COUNTY === 'wannian' ? '万年县' : '弋阳/万年两县');
+      var _cnMap = { yiyang: '弋阳县', wannian: '万年县', jian: '吉安县', suichuan: '遂川县', jian_suichuan: '吉安/遂川两县', all: '弋阳/万年两县' };
+      var countyName = _cnMap[CURRENT_COUNTY] || CURRENT_COUNTY;
       var titleDiv = document.querySelector('#stats-panel .stats-title');
       if (titleDiv) titleDiv.innerHTML = '&#x1F4CA; ' + countyName + '充电设施概况';
+
+      // 计算当前显示的点位数量
+      var displayedUrban = layers.urban.length;
+      var displayedGas = layers.gas.length;
+      var displayedPlanned = currentDisplayedPlanned;
+
+      var actualDisplayedCount = displayedUrban + displayedGas + displayedPlanned;
 
       var html = '';
       html += '<div class="stats-row"><div class="stats-dot" style="background:#2ecc40"></div>现有充电站：<span class="stats-val">' + urbanCount + '</span> 座';
       if (stats.existing_stations) html += '（' + stats.existing_stations + '台）';
       html += '</div>';
       html += '<div class="stats-row"><div class="stats-dot" style="background:#e67e22"></div>加油站：<span class="stats-val">' + gasCount + '</span> 座</div>';
-      html += '<div class="stats-row"><div class="stats-dot" style="background:#3498db"></div>规划新增：<span class="stats-val">' + plannedCount + '</span> 站';
-      if (stats.planned_piles_total) html += '（' + stats.planned_piles_total + '台）';
+      html += '<div class="stats-row"><div class="stats-dot" style="background:#3498db"></div>规划新增：<span class="stats-val">' + displayedPlanned + '</span> 站';
+      if (stats.planned_piles_total) html += '（共' + plannedCount + '站）';
       html += '</div>';
+
+      // 添加当前显示的点位统计
+      html += '<div class="stats-row"><div class="stats-dot" style="background:#f39c12"></div>当前显示点位：<span class="stats-val">' + actualDisplayedCount + '</span> 个</div>';
+
       if (stats.planned_power_total) {
         html += '<div class="stats-row"><div class="stats-dot" style="background:#9b59b6"></div>规划总功率：<span class="stats-val">' + Math.round(stats.planned_power_total).toLocaleString() + '</span> kW</div>';
       }
@@ -2161,8 +2688,208 @@ python generate_wannian_official.py</pre>
       document.getElementById('statsContent').innerHTML = html;
     }
 
+    // 更新当前显示的规划站点数量统计
+    function refreshDisplayedStats(displayedPlannedCount) {
+      if (displayedPlannedCount !== undefined) {
+        currentDisplayedPlanned = displayedPlannedCount;
+      } else {
+        currentDisplayedPlanned = layers.plan.length;
+      }
+
+      // 使用保存的原始数据重新更新面板
+      if (rawStatsData.stats) {
+        updateStatsPanel(
+          rawStatsData.stats,
+          rawStatsData.urbanCount,
+          rawStatsData.gasCount,
+          rawStatsData.plannedCount
+        );
+      }
+    }
+
     // 启动应用
     window.onload = boot;
+
+    // ===== 坐标调整工具 =====
+    var _ceMap = null;
+    var _ceAllItems = [];      // 从后端加载的所有站点
+    var _ceSelected = null;    // 当前选中待定位的站点
+    var _cePending = {};       // {table+id: {table,id,lng,lat,name}} 待保存
+    var _ceMarkers = {};       // 地图上的临时marker {table+id: marker}
+    var _cePlaceMarker = null; // 当前选中点的高亮marker
+    var _ceClickHandler = null;
+
+    function openCoordEditor() {
+      document.getElementById('coordEditorModal').style.display = 'block';
+      setTimeout(function() {
+        if (!_ceMap) {
+          _ceMap = new T.Map('ceMap');
+          _ceMap.centerAndZoom(new T.LngLat(114.88, 27.10), 9);
+          var layer = new T.TileLayer("https://t{s}.tianditu.gov.cn/DataServer?T=vec_w&x={x}&y={y}&l={z}&tk=36c2c7b1a00180d86e97fa8ca2cd3bf2",
+            {minZoom:1,maxZoom:18,subdomains:'01234567'});
+          _ceMap.addLayer(layer);
+          var labelLayer = new T.TileLayer("https://t{s}.tianditu.gov.cn/DataServer?T=cva_w&x={x}&y={y}&l={z}&tk=36c2c7b1a00180d86e97fa8ca2cd3bf2",
+            {minZoom:1,maxZoom:18,subdomains:'01234567'});
+          _ceMap.addLayer(labelLayer);
+        }
+        loadCoordEditorList();
+      }, 100);
+    }
+
+    function closeCoordEditor() {
+      document.getElementById('coordEditorModal').style.display = 'none';
+      _ceSelected = null;
+      _ceClickHandler = null;
+      document.getElementById('ceMapTip').style.display = 'none';
+    }
+
+    function loadCoordEditorList() {
+      var county = document.getElementById('ceCountySel').value;
+      var _cnCenter = {yiyang:[117.44,28.37],wannian:[117.07,28.69],jian:[114.88,27.10],suichuan:[114.52,26.32],jian_suichuan:[114.71,26.68]};
+      if (_ceMap) {
+        var c = _cnCenter[county]||[114.88,27.10];
+        _ceMap.centerAndZoom(new T.LngLat(c[0],c[1]), 9);
+      }
+      fetch('/api/stations/for-edit?county='+county)
+        .then(function(r){return r.json();})
+        .then(function(data){
+          _ceAllItems = data.items || [];
+          renderCoordList();
+          renderCeMapMarkers();
+        });
+    }
+
+    function renderCoordList() {
+      var type = document.getElementById('ceTypeSel').value;
+      var q = (document.getElementById('ceSearch').value||'').trim().toLowerCase();
+      var items = _ceAllItems.filter(function(it){
+        if (type !== 'all' && it.label_type !== type) return false;
+        if (q && it.name.toLowerCase().indexOf(q) < 0 && it.township.toLowerCase().indexOf(q) < 0) return false;
+        return true;
+      });
+      var html = '';
+      var twp = '';
+      items.forEach(function(it, idx) {
+        var key = it.table + '|' + it.id;
+        var isPending = !!_cePending[key];
+        var isSelected = _ceSelected && _ceSelected.table === it.table && _ceSelected.id === it.id;
+        var bg = isSelected ? '#e8d5f5' : (isPending ? '#d4edda' : (idx%2===0?'#fff':'#f9f9f9'));
+        var badge = isPending ? '<span style="color:#27ae60;font-weight:bold;margin-left:4px;">✓</span>' : '';
+        var typeTag = it.label_type === 'plan'
+          ? '<span style="background:#FF0000;color:#fff;border-radius:3px;padding:1px 4px;font-size:10px;margin-right:4px;">规划</span>'
+          : '<span style="background:#10B981;color:#fff;border-radius:3px;padding:1px 4px;font-size:10px;margin-right:4px;">现有</span>';
+        // 乡镇分组标题
+        if (it.label_type === 'plan' && it.township && it.township !== twp) {
+          twp = it.township;
+          html += '<div style="padding:3px 8px;background:#eee;font-size:11px;color:#666;font-weight:bold;">'+twp+'</div>';
+        }
+        html += '<div onclick="selectCeItem(\''+key+'\')" style="padding:5px 8px;cursor:pointer;background:'+bg+
+          ';border-bottom:1px solid #f0f0f0;display:flex;align-items:center;">'+
+          typeTag+'<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+it.name+'">'+it.name+'</span>'+
+          badge+'</div>';
+      });
+      if (!html) html = '<div style="padding:12px 8px;color:#aaa;font-size:12px;text-align:center;">无匹配站点</div>';
+      document.getElementById('ceList').innerHTML = html;
+    }
+
+    function selectCeItem(key) {
+      var parts = key.split('|');
+      var table = parts[0], id = parseInt(parts[1]);
+      _ceSelected = _ceAllItems.find(function(it){ return it.table===table && it.id===id; });
+      if (!_ceSelected) return;
+      renderCoordList();
+      // 更新状态栏
+      document.getElementById('ceStatus').textContent = '已选：'+_ceSelected.name;
+      document.getElementById('ceTipName').textContent = _ceSelected.name;
+      document.getElementById('ceMapTip').style.display = 'block';
+      // 地图居中到当前位置
+      var pendingKey = _ceSelected.table+'|'+_ceSelected.id;
+      var pos = _cePending[pendingKey] || _ceSelected;
+      if (pos.lng && pos.lat) {
+        _ceMap.panTo(new T.LngLat(pos.lng, pos.lat));
+      }
+      // 绑定地图点击
+      _ceMap.off('click', _ceClickHandler);
+      _ceClickHandler = function(e) {
+        var lng = e.lnglat.getLng(), lat = e.lnglat.getLat();
+        var key2 = _ceSelected.table+'|'+_ceSelected.id;
+        _cePending[key2] = {table:_ceSelected.table, id:_ceSelected.id,
+          name:_ceSelected.name, lng:lng, lat:lat};
+        // 移动marker
+        if (_ceMarkers[key2]) { _ceMap.removeOverLay(_ceMarkers[key2]); }
+        var icon = new T.Icon({iconUrl:'https://api.tianditu.gov.cn/v4.0/image/marker_red_sprite.png',
+          iconSize:new T.Point(19,27), iconAnchor:new T.Point(10,27)});
+        var mk = new T.Marker(new T.LngLat(lng,lat), {icon:icon});
+        _ceMap.addOverLay(mk);
+        _ceMarkers[key2] = mk;
+        // 更新原始数据显示
+        _ceSelected.lng = lng; _ceSelected.lat = lat;
+        updateCePendingBar();
+        renderCoordList();
+        document.getElementById('ceStatus').textContent = '已设置：'+_ceSelected.name+' ('+lng.toFixed(5)+','+lat.toFixed(5)+')';
+      };
+      _ceMap.addEventListener('click', _ceClickHandler);
+    }
+
+    function renderCeMapMarkers() {
+      // 清除旧markers
+      Object.values(_ceMarkers).forEach(function(mk){ _ceMap.removeOverLay(mk); });
+      _ceMarkers = {};
+      _ceAllItems.forEach(function(it) {
+        if (!it.lng || !it.lat) return;
+        var key = it.table+'|'+it.id;
+        var color = it.label_type==='plan' ? 'red' : 'blue';
+        var iconUrl = it.label_type==='plan'
+          ? 'https://api.tianditu.gov.cn/v4.0/image/marker_red_sprite.png'
+          : 'https://api.tianditu.gov.cn/v4.0/image/marker_blue_sprite.png';
+        var icon = new T.Icon({iconUrl:iconUrl, iconSize:new T.Point(19,27), iconAnchor:new T.Point(10,27)});
+        var mk = new T.Marker(new T.LngLat(it.lng, it.lat), {icon:icon});
+        _ceMap.addOverLay(mk);
+        _ceMarkers[key] = mk;
+        // 点击marker也选中
+        (function(k){ mk.addEventListener('click', function(){ selectCeItem(k); }); })(key);
+      });
+    }
+
+    function updateCePendingBar() {
+      var n = Object.keys(_cePending).length;
+      var bar = document.getElementById('cePendingBar');
+      if (n > 0) {
+        bar.style.display = 'flex';
+        document.getElementById('cePendingCount').textContent = n+' 处修改待保存';
+      } else {
+        bar.style.display = 'none';
+      }
+    }
+
+    function saveAllCoordEdits() {
+      var items = Object.values(_cePending);
+      if (!items.length) return;
+      var done = 0, total = items.length;
+      items.forEach(function(it) {
+        fetch('/api/stations/update-coord', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({table:it.table, id:it.id, lng:it.lng, lat:it.lat})
+        }).then(function(r){return r.json();}).then(function(d){
+          done++;
+          if (done === total) {
+            alert('已保存 '+total+' 处坐标修改');
+            _cePending = {};
+            updateCePendingBar();
+            loadCoordEditorList();
+          }
+        });
+      });
+    }
+
+    function clearAllCoordEdits() {
+      if (!Object.keys(_cePending).length) return;
+      if (!confirm('确认撤销所有未保存的修改？')) return;
+      _cePending = {};
+      updateCePendingBar();
+      loadCoordEditorList();
+    }
 
     // ===== 自定义规划功能 =====
 
@@ -2373,6 +3100,421 @@ python generate_wannian_official.py</pre>
       }
     }
 
+    // ===== 规划表数据调整 =====
+    function escHtml(v) {
+      if (v === null || typeof v === 'undefined') return '';
+      return String(v)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function normalizePlannedEditValue(field, value) {
+      if (value === null || typeof value === 'undefined' || value === '') return '';
+      if (PLANNED_EDIT_NUMERIC_FIELDS.indexOf(field) >= 0) {
+        var n = Number(value);
+        return Number.isNaN(n) ? String(value).trim() : String(n);
+      }
+      return String(value).trim();
+    }
+
+    function getPlannedDirtyCount() {
+      return Object.keys(plannedEditState.dirty || {}).length;
+    }
+
+    function syncPlannedEditFilters() {
+      var countySel = document.getElementById('peCounty');
+      var yearSel = document.getElementById('peYear');
+      if (countySel && CURRENT_COUNTY) countySel.value = CURRENT_COUNTY;
+      if (yearSel) yearSel.value = (activeYear === null || typeof activeYear === 'undefined') ? 'all' : String(activeYear);
+    }
+
+    function clampPlannedEditWindowToViewport() {
+      var win = document.getElementById('plannedEditWindow');
+      if (!win) return;
+
+      var vw = window.innerWidth || document.documentElement.clientWidth;
+      var vh = window.innerHeight || document.documentElement.clientHeight;
+      var rect = win.getBoundingClientRect();
+
+      var left = parseFloat(win.style.left);
+      var top = parseFloat(win.style.top);
+      if (Number.isNaN(left)) left = rect.left;
+      if (Number.isNaN(top)) top = rect.top;
+
+      var minLeft = 8;
+      var minTop = 8;
+      var maxLeft = Math.max(minLeft, vw - rect.width - 8);
+      var maxTop = Math.max(minTop, vh - rect.height - 8);
+
+      left = Math.min(maxLeft, Math.max(minLeft, left));
+      top = Math.min(maxTop, Math.max(minTop, top));
+
+      win.style.left = left + 'px';
+      win.style.top = top + 'px';
+    }
+
+    function resetPlannedEditWindowPosition() {
+      var win = document.getElementById('plannedEditWindow');
+      if (!win) return;
+
+      // 先放到安全位置，等待尺寸稳定后再居中
+      win.style.left = '8px';
+      win.style.top = '8px';
+      setTimeout(function () {
+        var vw = window.innerWidth || document.documentElement.clientWidth;
+        var rect = win.getBoundingClientRect();
+        var left = Math.max(8, Math.floor((vw - rect.width) / 2));
+        win.style.left = left + 'px';
+        win.style.top = '8px';
+        clampPlannedEditWindowToViewport();
+      }, 0);
+    }
+
+    function initPlannedEditDrag() {
+      if (plannedEditDragState.inited) return;
+      var handle = document.getElementById('plannedEditDragHandle');
+      var win = document.getElementById('plannedEditWindow');
+      if (!handle || !win) return;
+
+      handle.addEventListener('mousedown', function (e) {
+        if (e.target && (e.target.classList.contains('close-btn') || (e.target.closest && e.target.closest('.close-btn')))) {
+          return;
+        }
+        var left = parseFloat(win.style.left);
+        var top = parseFloat(win.style.top);
+        if (Number.isNaN(left)) left = win.getBoundingClientRect().left;
+        if (Number.isNaN(top)) top = win.getBoundingClientRect().top;
+
+        plannedEditDragState.dragging = true;
+        plannedEditDragState.startX = e.clientX;
+        plannedEditDragState.startY = e.clientY;
+        plannedEditDragState.baseLeft = left;
+        plannedEditDragState.baseTop = top;
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', function (e) {
+        if (!plannedEditDragState.dragging) return;
+        var winEl = document.getElementById('plannedEditWindow');
+        if (!winEl) return;
+
+        var dx = e.clientX - plannedEditDragState.startX;
+        var dy = e.clientY - plannedEditDragState.startY;
+        winEl.style.left = (plannedEditDragState.baseLeft + dx) + 'px';
+        winEl.style.top = (plannedEditDragState.baseTop + dy) + 'px';
+        clampPlannedEditWindowToViewport();
+      });
+
+      document.addEventListener('mouseup', function () {
+        plannedEditDragState.dragging = false;
+      });
+
+      window.addEventListener('resize', function () {
+        var modal = document.getElementById('plannedEditModal');
+        if (modal && modal.style.display === 'block') {
+          clampPlannedEditWindowToViewport();
+        }
+      });
+
+      plannedEditDragState.inited = true;
+    }
+
+    function updatePlannedDirtyHint() {
+      var cnt = getPlannedDirtyCount();
+      var hint = document.getElementById('peDirtyHint');
+      var modalHint = document.getElementById('peModalDirty');
+
+      if (hint) {
+        if (cnt > 0) {
+          hint.style.display = 'block';
+          hint.innerHTML = '有 ' + cnt + ' 条修改待提交';
+        } else {
+          hint.style.display = 'none';
+        }
+      }
+      if (modalHint) {
+        if (cnt > 0) {
+          modalHint.style.display = 'block';
+          modalHint.innerHTML = '有 ' + cnt + ' 条修改待提交';
+        } else {
+          modalHint.style.display = 'none';
+        }
+      }
+    }
+
+    function openPlannedEditModal() {
+      document.getElementById('plannedEditModal').style.display = 'block';
+      initPlannedEditDrag();
+      resetPlannedEditWindowPosition();
+      if (!plannedEditState.rows || plannedEditState.rows.length === 0) {
+        loadPlannedEditRows(true);
+      } else {
+        renderPlannedEditTable();
+      }
+    }
+
+    function closePlannedEditModal() {
+      document.getElementById('plannedEditModal').style.display = 'none';
+    }
+
+    function plannedEditFieldInput(row, field, type, step) {
+      var val = row[field];
+      var dirty = plannedEditState.dirty[String(row.id)] && plannedEditState.dirty[String(row.id)].fields.hasOwnProperty(field);
+      var style = dirty ? 'border-color:#f59e0b;background:#fffbeb;' : '';
+      var stepAttr = step ? (' step="' + step + '"') : '';
+      return '<input type="' + type + '"' + stepAttr +
+             ' data-id="' + row.id + '"' +
+             ' data-field="' + field + '"' +
+             ' value="' + escHtml(val === null || typeof val === 'undefined' ? '' : val) + '"' +
+             ' onchange="onPlannedEditFieldChange(this)" style="' + style + '">';
+    }
+
+    function renderPlannedEditPager() {
+      var total = plannedEditState.total || 0;
+      var offset = plannedEditState.offset || 0;
+      var size = plannedEditState.rows ? plannedEditState.rows.length : 0;
+      var start = total === 0 ? 0 : offset + 1;
+      var end = total === 0 ? 0 : offset + size;
+      var pageInfo = document.getElementById('pePageInfo');
+      if (pageInfo) pageInfo.innerHTML = '总计 ' + total + ' 条，当前 ' + start + '-' + end;
+
+      var prevBtn = document.getElementById('pePrevBtn');
+      var nextBtn = document.getElementById('peNextBtn');
+      if (prevBtn) prevBtn.disabled = offset <= 0;
+      if (nextBtn) nextBtn.disabled = (offset + (plannedEditState.limit || 100)) >= total;
+    }
+
+    function renderPlannedEditTable() {
+      var body = document.getElementById('peTableBody');
+      if (!body) return;
+
+      var rows = plannedEditState.rows || [];
+      if (rows.length === 0) {
+        body.innerHTML = '<tr><td colspan="13" style="text-align:center;color:#6e7781;padding:20px;">无匹配记录</td></tr>';
+        renderPlannedEditPager();
+        updatePlannedDirtyHint();
+        return;
+      }
+
+      var html = '';
+      rows.forEach(function (row) {
+        var rowDirty = plannedEditState.dirty[String(row.id)] ? ' style="background:#fffbeb;"' : '';
+        html += '<tr id="peRow_' + row.id + '"' + rowDirty + '>' +
+          '<td class="pe-readonly">' + escHtml(row.id) + '</td>' +
+          '<td class="pe-readonly">' + escHtml(row.county || '') + '</td>' +
+          '<td>' + plannedEditFieldInput(row, 'station_name', 'text') + '</td>' +
+          '<td>' + plannedEditFieldInput(row, 'township', 'text') + '</td>' +
+          '<td>' + plannedEditFieldInput(row, 'year', 'number', '1') + '</td>' +
+          '<td>' + plannedEditFieldInput(row, 'scene', 'text') + '</td>' +
+          '<td>' + plannedEditFieldInput(row, 'quantity', 'number', '1') + '</td>' +
+          '<td>' + plannedEditFieldInput(row, 'power_kw', 'number', '0.01') + '</td>' +
+          '<td>' + plannedEditFieldInput(row, 'category', 'text') + '</td>' +
+          '<td>' + plannedEditFieldInput(row, 'category_code', 'number', '1') + '</td>' +
+          '<td>' + plannedEditFieldInput(row, 'equipment', 'text') + '</td>' +
+          '<td>' + plannedEditFieldInput(row, 'longitude', 'number', '0.000001') + '</td>' +
+          '<td>' + plannedEditFieldInput(row, 'latitude', 'number', '0.000001') + '</td>' +
+          '</tr>';
+      });
+      body.innerHTML = html;
+      renderPlannedEditPager();
+      updatePlannedDirtyHint();
+    }
+
+    function onPlannedEditFieldChange(input) {
+      var id = parseInt(input.dataset.id, 10);
+      var field = input.dataset.field;
+      if (!id || !field) return;
+
+      var row = null;
+      for (var i = 0; i < plannedEditState.rows.length; i++) {
+        if (plannedEditState.rows[i].id === id) {
+          row = plannedEditState.rows[i];
+          break;
+        }
+      }
+      if (!row) return;
+
+      var newVal = input.value;
+      if (PLANNED_EDIT_NUMERIC_FIELDS.indexOf(field) >= 0) {
+        if (newVal === '') {
+          newVal = null;
+        } else {
+          var n = Number(newVal);
+          newVal = Number.isNaN(n) ? input.value : n;
+        }
+      } else {
+        newVal = (newVal || '').trim();
+        if (newVal === '') newVal = null;
+      }
+
+      var oldVal = row[field];
+      var key = String(id);
+      var same = normalizePlannedEditValue(field, newVal) === normalizePlannedEditValue(field, oldVal);
+
+      if (same) {
+        if (plannedEditState.dirty[key] && plannedEditState.dirty[key].fields.hasOwnProperty(field)) {
+          delete plannedEditState.dirty[key].fields[field];
+          if (Object.keys(plannedEditState.dirty[key].fields).length === 0) {
+            delete plannedEditState.dirty[key];
+          }
+        }
+      } else {
+        if (!plannedEditState.dirty[key]) plannedEditState.dirty[key] = { id: id, fields: {} };
+        plannedEditState.dirty[key].fields[field] = newVal;
+      }
+
+      renderPlannedEditTable();
+    }
+
+    function buildPlannedEditQueryUrl() {
+      var county = document.getElementById('peCounty') ? document.getElementById('peCounty').value : CURRENT_COUNTY;
+      var year = document.getElementById('peYear') ? document.getElementById('peYear').value : 'all';
+      var township = document.getElementById('peTownship') ? document.getElementById('peTownship').value.trim() : '';
+      var keyword = document.getElementById('peKeyword') ? document.getElementById('peKeyword').value.trim() : '';
+      var limit = document.getElementById('peLimit') ? parseInt(document.getElementById('peLimit').value, 10) : 100;
+
+      if (!limit || limit < 1) limit = 100;
+      if (limit > 300) limit = 300;
+      plannedEditState.limit = limit;
+
+      var url = '/api/stations/planned/edit-list?county=' + encodeURIComponent(county || '') +
+        '&year=' + encodeURIComponent(year || 'all') +
+        '&township=' + encodeURIComponent(township || '') +
+        '&keyword=' + encodeURIComponent(keyword || '') +
+        '&limit=' + encodeURIComponent(limit) +
+        '&offset=' + encodeURIComponent(plannedEditState.offset || 0);
+      return url;
+    }
+
+    function loadPlannedEditRows(resetOffset) {
+      if (plannedEditState.loading) return;
+      if (getPlannedDirtyCount() > 0) {
+        if (!confirm('存在未提交修改，重新查询会清空这些修改，是否继续？')) {
+          return;
+        }
+      }
+
+      if (resetOffset) plannedEditState.offset = 0;
+      plannedEditState.dirty = {};
+      updatePlannedDirtyHint();
+      var resultEl = document.getElementById('peSubmitResult');
+      if (resultEl) resultEl.innerHTML = '';
+
+      var status = document.getElementById('peStatus');
+      if (status) status.innerHTML = '正在加载编辑数据...';
+
+      plannedEditState.loading = true;
+      fetchJSON(buildPlannedEditQueryUrl()).then(function (res) {
+        plannedEditState.rows = res.items || [];
+        plannedEditState.total = res.count || 0;
+        plannedEditState.limit = res.limit || plannedEditState.limit || 100;
+        plannedEditState.offset = res.offset || 0;
+        renderPlannedEditTable();
+        if (status) {
+          status.innerHTML = '已加载 ' + plannedEditState.rows.length + ' 条 / 总计 ' + plannedEditState.total + ' 条';
+        }
+      }).catch(function (err) {
+        console.error('规划编辑数据加载失败:', err);
+        if (status) status.innerHTML = '加载失败：' + err.message;
+        var body = document.getElementById('peTableBody');
+        if (body) body.innerHTML = '<tr><td colspan="13" style="text-align:center;color:#dc2626;padding:20px;">加载失败：' + escHtml(err.message) + '</td></tr>';
+      }).finally(function () {
+        plannedEditState.loading = false;
+      });
+    }
+
+    function plannedEditPrevPage() {
+      if ((plannedEditState.offset || 0) <= 0) return;
+      if (getPlannedDirtyCount() > 0) {
+        if (!confirm('存在未提交修改，翻页会清空这些修改，是否继续？')) return;
+      }
+      plannedEditState.offset = Math.max(0, (plannedEditState.offset || 0) - (plannedEditState.limit || 100));
+      loadPlannedEditRows(false);
+    }
+
+    function plannedEditNextPage() {
+      var limit = plannedEditState.limit || 100;
+      if ((plannedEditState.offset || 0) + limit >= (plannedEditState.total || 0)) return;
+      if (getPlannedDirtyCount() > 0) {
+        if (!confirm('存在未提交修改，翻页会清空这些修改，是否继续？')) return;
+      }
+      plannedEditState.offset = (plannedEditState.offset || 0) + limit;
+      loadPlannedEditRows(false);
+    }
+
+    function discardPlannedEdits() {
+      if (getPlannedDirtyCount() === 0) return;
+      if (!confirm('确认撤销所有未提交修改？')) return;
+      plannedEditState.dirty = {};
+      var resultEl = document.getElementById('peSubmitResult');
+      if (resultEl) resultEl.innerHTML = '';
+      renderPlannedEditTable();
+      updatePlannedDirtyHint();
+    }
+
+    function submitPlannedEdits() {
+      var keys = Object.keys(plannedEditState.dirty || {});
+      if (keys.length === 0) {
+        alert('当前没有待提交的修改。');
+        return;
+      }
+      if (!confirm('确认提交 ' + keys.length + ' 条修改？提交前将自动备份数据库。')) return;
+
+      var updates = keys.map(function (k) {
+        return { id: parseInt(k, 10), fields: plannedEditState.dirty[k].fields };
+      });
+
+      var submitResult = document.getElementById('peSubmitResult');
+      if (submitResult) submitResult.innerHTML = '正在提交，请稍候...';
+
+      fetch('/api/stations/planned/batch-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          county: document.getElementById('peCounty') ? document.getElementById('peCounty').value : CURRENT_COUNTY,
+          updates: updates
+        })
+      }).then(function (resp) {
+        return resp.json().then(function (data) {
+          return { ok: resp.ok, data: data };
+        });
+      }).then(function (ret) {
+        if (!ret.ok) {
+          throw new Error(ret.data && (ret.data.error || ret.data.message) ? (ret.data.error || ret.data.message) : '提交失败');
+        }
+
+        var data = ret.data || {};
+        var msg = '提交完成：成功 ' + (data.updated_count || 0) + ' 条，失败 ' + (data.failed_count || 0) + ' 条';
+        if (data.backup_file) msg += '；备份：' + data.backup_file;
+        if (submitResult) {
+          submitResult.innerHTML = escHtml(msg);
+        }
+
+        if (data.errors && data.errors.length > 0) {
+          var detail = data.errors.slice(0, 5).map(function (e) {
+            return 'ID=' + (e.id || '-') + '：' + (e.error || '未知错误');
+          }).join('\n');
+          alert(msg + '\n\n部分失败明细（最多5条）：\n' + detail);
+        } else {
+          alert(msg);
+        }
+
+        plannedEditState.dirty = {};
+        updatePlannedDirtyHint();
+        loadPlannedEditRows(false);
+        if ((data.updated_count || 0) > 0) {
+          loadAllData();
+        }
+      }).catch(function (err) {
+        console.error('批量更新失败:', err);
+        if (submitResult) submitResult.innerHTML = '提交失败：' + escHtml(err.message);
+        alert('提交失败：' + err.message);
+      });
+    }
+
     // ===== 规划图生成弹窗函数 =====
     function showPlanningModal() {
       document.getElementById('planningModal').style.display = 'block';
@@ -2411,8 +3553,13 @@ python generate_wannian_official.py</pre>
     function collectVisiblePoints() {
       var points = [];
 
+      // 检查对应图层是否可见（通过复选框状态判断）
+      var urbanVisible = document.getElementById('cb_urban')?.checked;
+      var gasVisible = document.getElementById('cb_gas')?.checked;
+      var planVisible = document.getElementById('cb_plan')?.checked;
+
       // 收集现有站（绿色点）
-      if (rawData.urban && rawData.urban.length > 0) {
+      if (urbanVisible && rawData.urban && rawData.urban.length > 0) {
         rawData.urban.forEach(function(d) {
           if (d.lng && d.lat) {
             points.push({
@@ -2426,7 +3573,7 @@ python generate_wannian_official.py</pre>
       }
 
       // 收集加油站（棕色点）
-      if (rawData.gas && rawData.gas.length > 0) {
+      if (gasVisible && rawData.gas && rawData.gas.length > 0) {
         rawData.gas.forEach(function(d) {
           if (d.lng && d.lat) {
             points.push({
@@ -2439,9 +3586,20 @@ python generate_wannian_official.py</pre>
         });
       }
 
-      // 收集规划站（蓝色点）
-      if (rawData.plan && rawData.plan.length > 0) {
-        rawData.plan.forEach(function(d) {
+      // 收集规划站（蓝色点）—— 使用当前年份过滤后的数据，与地图显示一致
+      if (planVisible && allPlannedData && allPlannedData.length > 0) {
+        var planSource = allPlannedData;
+        // 按当前年份过滤（activeYear 为 null 时显示全部）
+        if (typeof activeYear !== 'undefined' && activeYear !== null) {
+          planSource = allPlannedData.filter(function(d) { return d.year === activeYear; });
+        }
+        // 按当前场景分类过滤（activeCats 为 null/空时显示全部）
+        if (typeof activeCats !== 'undefined' && activeCats !== null && activeCats.length > 0) {
+          planSource = planSource.filter(function(d) {
+            return activeCats.indexOf(d.category || '') >= 0;
+          });
+        }
+        planSource.forEach(function(d) {
           if (d.lng && d.lat) {
             points.push({
               name: d.name,
@@ -2456,46 +3614,342 @@ python generate_wannian_official.py</pre>
       return points;
     }
 
+    // 生成4个类别统计表格
+    function generateCategoryTables() {
+      var btn = document.getElementById('btnGenCatTables');
+      var resultDiv = document.getElementById('catTablesResult');
+      btn.disabled = true;
+      btn.textContent = '生成中...';
+      resultDiv.style.display = 'none';
+
+      var currentYear = (typeof activeYear !== 'undefined' && activeYear !== null) ? activeYear : null;
+
+      fetch('/api/generate-category-tables', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ county: CURRENT_COUNTY, year: currentYear })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          btn.disabled = false;
+          btn.textContent = '📊 生成类别统计表格（4张）';
+          if (!data.success) {
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<span style="color:red">生成失败：' + (data.error || '未知错误') + '</span>';
+            return;
+          }
+          var html = '<b>已生成 ' + data.count + ' 张表格：</b><br>';
+          data.files.forEach(function (f) {
+            html += '<a href="' + f.url + '" target="_blank" style="color:#15803d;text-decoration:underline;">'
+              + f.category + '</a>　';
+          });
+          resultDiv.style.display = 'block';
+          resultDiv.innerHTML = html;
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          btn.textContent = '📊 生成类别统计表格（4张）';
+          resultDiv.style.display = 'block';
+          resultDiv.innerHTML = '<span style="color:red">请求失败：' + err + '</span>';
+        });
+    }
+
+    // 生成类别统计 Word 文档
+    function generateCategoryWord() {
+      var btn = document.getElementById('btnGenCatWord');
+      var resultDiv = document.getElementById('catTablesResult');
+      btn.disabled = true;
+      btn.textContent = '生成中...';
+
+      var currentYear = (typeof activeYear !== 'undefined' && activeYear !== null) ? activeYear : null;
+
+      fetch('/api/generate-category-word', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ county: CURRENT_COUNTY, year: currentYear })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          btn.disabled = false;
+          btn.textContent = '📘 生成类别统计 Word 文档';
+          resultDiv.style.display = 'block';
+          if (!data.success) {
+            resultDiv.innerHTML = '<span style="color:red">生成失败：' + (data.error || '未知错误') + '</span>';
+            return;
+          }
+          resultDiv.innerHTML = '✅ Word 已生成：<a href="' + data.url + '" download="'
+            + data.filename + '" style="color:#1e40af;font-weight:600;">' + data.filename + '</a>';
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          btn.textContent = '📘 生成类别统计 Word 文档';
+          resultDiv.style.display = 'block';
+          resultDiv.innerHTML = '<span style="color:red">请求失败：' + err + '</span>';
+        });
+    }
+
     // 调用后端 API 生成动态规划图
     function generateDynamicMap() {
       var points = collectVisiblePoints();
 
-      if (points.length === 0) {
-        alert('当前地图上没有可见的规划点！\n\n请确保规划充电站、现有站、加油站等图层已打开。');
-        return;
-      }
+      // 获取当前年份筛选状态
+      var currentYear = (typeof activeYear !== 'undefined' && activeYear !== null) ? activeYear : null;
 
-      if (!confirm('当前地图上共有 ' + points.length + ' 个规划点，确定要生成规划图吗？')) {
-        return;
-      }
+      // 构建默认标题（参考规划图命名格式）
+      var countyLabelMap = { yiyang: '弋阳县', wannian: '万年县', all: '弋阳/万年县', jian: '吉安县', suichuan: '遂川县', jian_suichuan: '吉安/遂川县' };
+      var countyLabelStr = countyLabelMap[CURRENT_COUNTY] || '弋阳县';
+      var yearStr = currentYear ? '（' + currentYear + '年）' : '';
+      var defaultTitle = countyLabelStr + '新能源汽车公共充换电基础设施建设计划' + yearStr;
 
-      // 显示加载提示
-      var loadingMessage = alert('正在生成规划图，请稍候...\n\n（点击确定后开始生成）');
+      // 弹出标题输入框，留空则不显示标题
+      var mapTitle = prompt('请输入规划图标题（留空则不显示标题）：', defaultTitle);
+      if (mapTitle === null) return; // 用户点了取消
+
+      var btn = document.getElementById('btnGenerateDynamic');
+      var origText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '⏳ 生成中，请稍候...';
+      btn.style.opacity = '0.7';
 
       fetch('/api/generate-dynamic-map', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           points: points,
-          county: CURRENT_COUNTY || 'yiyang'
+          county: CURRENT_COUNTY || 'yiyang',
+          title: mapTitle.trim(),
+          year: currentYear
         })
       })
-      .then(function(response) {
-        return response.json();
-      })
+      .then(function(response) { return response.json(); })
       .then(function(data) {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+        btn.style.opacity = '1';
+
         if (data.success) {
-          alert('✅ 规划图生成成功！\n\n' + data.message + '\n\nPNG文件：' + data.png_file + '\nPDF文件：' + data.pdf_file + '\n\n输出目录：' + data.output_dir);
+          // 存储参数供重新生成使用
+          _currentMapParams = { points: points, county: CURRENT_COUNTY || 'yiyang',
+                                title: mapTitle.trim(), year: currentYear };
+          // 重置框选状态
+          clearImgRect('stats'); clearImgRect('legend');
+          // 显示预览弹窗
+          var _clMap = { yiyang: '弋阳县', wannian: '万年县', jian: '吉安县', suichuan: '遂川县', jian_suichuan: '吉安+遂川', all: '弋阳+万年' };
+          var countyLabel = _clMap[CURRENT_COUNTY] || CURRENT_COUNTY;
+          document.getElementById('dynamicMapInfo').textContent =
+            countyLabel + ' · ' + data.points_count + ' 个点位 · ' + data.png_file;
+          var previewSrc = data.preview_url + '?t=' + Date.now();
+          document.getElementById('dynamicMapImg').src = previewSrc;
+          document.getElementById('dynamicMapDownload').href = previewSrc;
+          document.getElementById('dynamicMapDownload').download = data.png_file;
+          document.getElementById('dynamicMapModal').style.display = 'block';
         } else {
           alert('❌ 规划图生成失败：\n\n' + data.error);
         }
       })
       .catch(function(error) {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+        btn.style.opacity = '1';
         alert('❌ 请求失败：\n\n' + error.message);
       });
     }
+
+    // ===== 预览图上框选放置位置 =====
+    var _imgDrawMode  = null;   // 'stats' | 'legend'
+    var _imgDrawStart = null;
+    var _imgStatsRect  = null;  // 归一化坐标 {x,y,w,h}，相对图片 top-left
+    var _imgLegendRect = null;
+    var _currentMapParams = null;  // 存上一次请求参数，用于重新生成
+
+    function startImgDraw(mode) {
+      _imgDrawMode = mode;
+      var label = mode === 'stats' ? '统计表' : '图例';
+      var overlay = document.getElementById('img-draw-overlay');
+      var tip     = document.getElementById('img-draw-tip');
+      overlay.style.display = 'block';
+      tip.textContent = '在图上拖拽框选「' + label + '」的放置区域，Esc 取消';
+      tip.style.display = 'block';
+    }
+
+    function _cancelImgDraw() {
+      _imgDrawMode = null; _imgDrawStart = null;
+      document.getElementById('img-draw-overlay').style.display = 'none';
+      document.getElementById('img-draw-tip').style.display = 'none';
+      document.getElementById('img-rubber-band').style.display = 'none';
+      document.getElementById('selection-preview-canvas').style.display = 'none';
+    }
+
+    function clearImgRect(mode) {
+      if (mode === 'stats') {
+        _imgStatsRect = null;
+        document.getElementById('stats-rect-box').style.display = 'none';
+        document.getElementById('stats-draw-status').textContent = '未设置';
+        document.getElementById('stats-draw-status').style.color = '#aaa';
+        document.getElementById('btn-clear-stats-draw').style.display = 'none';
+      } else {
+        _imgLegendRect = null;
+        document.getElementById('legend-rect-box').style.display = 'none';
+        document.getElementById('legend-draw-status').textContent = '未设置';
+        document.getElementById('legend-draw-status').style.color = '#aaa';
+        document.getElementById('btn-clear-legend-draw').style.display = 'none';
+      }
+      _updateRegenBtn();
+    }
+
+    function _updateRegenBtn() {
+      var btn = document.getElementById('btn-regen');
+      var hasRect = _imgStatsRect || _imgLegendRect;
+      btn.disabled = !hasRect;
+      btn.style.opacity = hasRect ? '1' : '0.5';
+      btn.style.cursor  = hasRect ? 'pointer' : 'not-allowed';
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && _imgDrawMode) _cancelImgDraw();
+    });
+
+    (function() {
+      var overlay  = document.getElementById('img-draw-overlay');
+      var rubber   = document.getElementById('img-rubber-band');
+
+      function getRects() {
+        var container = document.getElementById('img-draw-container').getBoundingClientRect();
+        var img       = document.getElementById('dynamicMapImg').getBoundingClientRect();
+        return { container: container, img: img };
+      }
+
+      overlay.addEventListener('mousedown', function(e) {
+        if (!_imgDrawMode) return;
+        var r = getRects();
+        // 用容器坐标定位 CSS 元素
+        _imgDrawStart = { x: e.clientX - r.container.left, y: e.clientY - r.container.top };
+        rubber.style.left = _imgDrawStart.x + 'px';
+        rubber.style.top  = _imgDrawStart.y + 'px';
+        rubber.style.width = '0'; rubber.style.height = '0';
+        rubber.style.display = 'block';
+        e.preventDefault();
+      });
+
+      overlay.addEventListener('mousemove', function(e) {
+        if (!_imgDrawMode || !_imgDrawStart) return;
+        var r = getRects();
+        var x = e.clientX - r.container.left, y = e.clientY - r.container.top;
+        var rx = Math.min(_imgDrawStart.x, x), ry = Math.min(_imgDrawStart.y, y);
+        var rw = Math.abs(x - _imgDrawStart.x),   rh = Math.abs(y - _imgDrawStart.y);
+        rubber.style.left = rx + 'px'; rubber.style.top = ry + 'px';
+        rubber.style.width = rw + 'px'; rubber.style.height = rh + 'px';
+
+        // ── 选区放大预览
+        if (rw > 10 && rh > 10) {
+          var img = document.getElementById('dynamicMapImg');
+          var cvs = document.getElementById('selection-preview-canvas');
+          var ctx = cvs.getContext('2d');
+          var imgOffX = r.img.left - r.container.left;
+          var imgOffY = r.img.top  - r.container.top;
+          // 归一化坐标 → 原图像素坐标
+          var nx = (rx - imgOffX) / r.img.width;
+          var ny = (ry - imgOffY) / r.img.height;
+          var nw = rw / r.img.width;
+          var nh = rh / r.img.height;
+          var sx = Math.max(0, nx * img.naturalWidth);
+          var sy = Math.max(0, ny * img.naturalHeight);
+          var sw = Math.min(nw * img.naturalWidth,  img.naturalWidth  - sx);
+          var sh = Math.min(nh * img.naturalHeight, img.naturalHeight - sy);
+          if (sw > 0 && sh > 0) {
+            ctx.clearRect(0, 0, 280, 280);
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 280, 280);
+            // 贴近鼠标右下方，避开边缘
+            var px = e.clientX + 16, py = e.clientY + 16;
+            if (px + 290 > window.innerWidth)  px = e.clientX - 296;
+            if (py + 290 > window.innerHeight) py = e.clientY - 296;
+            cvs.style.left = px + 'px'; cvs.style.top = py + 'px';
+            cvs.style.display = 'block';
+          }
+        }
+      });
+
+      overlay.addEventListener('mouseup', function(e) {
+        if (!_imgDrawMode || !_imgDrawStart) return;
+        var r    = getRects();
+        // CSS 坐标（相对容器）
+        var xC   = e.clientX - r.container.left, yC = e.clientY - r.container.top;
+        var left = Math.min(_imgDrawStart.x, xC), top = Math.min(_imgDrawStart.y, yC);
+        var w    = Math.abs(xC - _imgDrawStart.x), h  = Math.abs(yC - _imgDrawStart.y);
+
+        rubber.style.display = 'none';
+        document.getElementById('selection-preview-canvas').style.display = 'none';
+        if (w < 15 || h < 15) { _cancelImgDraw(); return; }
+
+        // 归一化：相对于图片本身（去除图片在容器内的偏移）
+        var imgOffX = r.img.left - r.container.left;
+        var imgOffY = r.img.top  - r.container.top;
+        var norm = {
+          x: (left - imgOffX) / r.img.width,
+          y: (top  - imgOffY) / r.img.height,
+          w: w / r.img.width,
+          h: h / r.img.height
+        };
+
+        // 显示持久框（CSS 坐标，相对容器）
+        var boxId = _imgDrawMode === 'stats' ? 'stats-rect-box' : 'legend-rect-box';
+        var box = document.getElementById(boxId);
+        box.style.left = left + 'px'; box.style.top = top + 'px';
+        box.style.width = w + 'px';   box.style.height = h + 'px';
+        box.style.display = 'block';
+
+        if (_imgDrawMode === 'stats') {
+          _imgStatsRect = norm;
+          document.getElementById('stats-draw-status').textContent = '✓ 已设置';
+          document.getElementById('stats-draw-status').style.color = '#3498db';
+          document.getElementById('btn-clear-stats-draw').style.display = 'inline';
+        } else {
+          _imgLegendRect = norm;
+          document.getElementById('legend-draw-status').textContent = '✓ 已设置';
+          document.getElementById('legend-draw-status').style.color = '#e67e22';
+          document.getElementById('btn-clear-legend-draw').style.display = 'inline';
+        }
+        _updateRegenBtn();
+        _cancelImgDraw();
+      });
+    })();
+
+    function regenWithRects() {
+      if (!_currentMapParams) return;
+      var btn = document.getElementById('btnGenerateDynamic');
+      document.getElementById('btn-regen').disabled = true;
+      document.getElementById('btn-regen').textContent = '⏳ 生成中...';
+
+      fetch('/api/generate-dynamic-map', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.assign({}, _currentMapParams, {
+          stats_rect:  _imgStatsRect,
+          legend_rect: _imgLegendRect
+        }))
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        document.getElementById('btn-regen').disabled = false;
+        document.getElementById('btn-regen').textContent = '↺ 重新生成';
+        if (data.success) {
+          var src = data.preview_url + '?t=' + Date.now();
+          document.getElementById('dynamicMapImg').src = src;
+          document.getElementById('dynamicMapDownload').href = src;
+          document.getElementById('dynamicMapDownload').download = data.png_file;
+          // 清除框选框（图片已更新，框位置已不准确）
+          clearImgRect('stats'); clearImgRect('legend');
+        } else {
+          alert('生成失败：' + data.error);
+        }
+      })
+      .catch(function(err) {
+        document.getElementById('btn-regen').disabled = false;
+        document.getElementById('btn-regen').textContent = '↺ 重新生成';
+        alert('请求失败：' + err.message);
+      });
+    }
+    // ===== 预览图上框选 END =====
 
     // 获取地图标记的坐标
     function getMarkerCoords(marker) {
