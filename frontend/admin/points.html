@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>点位管理 - 后台管理系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 24px; font-weight: 600; }
+        .header nav { display: flex; gap: 20px; }
+        .header nav a { color: white; text-decoration: none; padding: 8px 16px; border-radius: 6px; }
+        .header nav a:hover { background: rgba(255,255,255,0.2); }
+        .container { max-width: 1400px; margin: 0 auto; padding: 30px; }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .filters { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .filters select, .filters input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-secondary { background: #e0e0e0; color: #333; }
+
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-weight: 600; color: #555; font-size: 13px; }
+        tr:hover { background: #f8f9fa; }
+        .actions { display: flex; gap: 8px; }
+        .actions a {
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            text-decoration: none;
+            color: #667eea;
+            background: #f0f0ff;
+        }
+        .actions a:hover { background: #e0e0ff; }
+        .actions a.delete { color: #dc2626; background: #fef0f0; }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-top: 1px solid #eee;
+        }
+        .pagination-info { color: #666; font-size: 14px; }
+        .pagination-btns { display: flex; gap: 8px; }
+        .pagination-btns button {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .pagination-btns button:hover:not(:disabled) { background: #f0f0ff; }
+        .pagination-btns button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h3 { font-size: 18px; }
+        .modal-header .close { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; }
+        .modal-body { padding: 20px; }
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; color: #555; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+        .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>点位数据管理</h1>
+        <nav>
+            <a href="/charging/admin/">首页</a>
+            <a href="/charging/admin/regions">地区管理</a>
+            <a href="/charging/admin/layers">图层管理</a>
+            <a href="/charging/admin/points" style="background: rgba(255,255,255,0.2);">点位管理</a>
+            <a href="/charging/admin/import">数据导入</a>
+            <a href="/">返回前端</a>
+        </nav>
+    </div>
+
+    <div class="container">
+        <div class="toolbar">
+            <div class="filters">
+                <select id="layerFilter" onchange="loadPoints()">
+                    <option value="">全部图层</option>
+                </select>
+                <select id="countyFilter" onchange="loadPoints()">
+                    <option value="">全部县区</option>
+                </select>
+                <input type="text" id="keywordFilter" placeholder="搜索点位名称..." onkeydown="if(event.key==='Enter')loadPoints()">
+            </div>
+            <div>
+                <button class="btn btn-danger" id="batchDeleteBtn" onclick="batchDelete()" style="display:none; background:#dc2626; color:white;">🗑️ 批量删除</button>
+                <a href="/charging/admin/import" class="btn btn-secondary">📥 导入</a>
+                <a href="/charging/admin/map-editor" class="btn btn-primary">➕ 新增点位</a>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+                        <th>ID</th>
+                        <th>点位名称</th>
+                        <th>图层类型</th>
+                        <th>县区</th>
+                        <th>乡镇</th>
+                        <th>经度</th>
+                        <th>纬度</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="pointTable">
+                    <tr><td colspan="9" class="empty-state">加载中...</td></tr>
+                </tbody>
+            </table>
+            <div class="pagination" id="pagination" style="display:none">
+                <div class="pagination-info" id="paginationInfo">共 0 条</div>
+                <div class="pagination-btns">
+                    <button onclick="prevPage()" id="prevBtn">上一页</button>
+                    <button onclick="nextPage()" id="nextBtn">下一页</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 点位详情 Modal -->
+    <div class="modal" id="pointModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">点位详情</h3>
+                <button class="close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="pointDetail">
+                <!-- 动态填充 -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">关闭</button>
+                <a href="#" class="btn btn-primary" id="editPointBtn">编辑</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        let totalPages = 0;
+        let layers = [];
+        let counties = new Set();
+
+        // 加载图层列表（用于过滤器）
+        async function loadLayers() {
+            try {
+                const res = await fetch('/charging/admin/api/layers');
+                const data = await res.json();
+                layers = data.layers || [];
+                const select = document.getElementById('layerFilter');
+                select.innerHTML = '<option value="">全部图层</option>' +
+                    layers.map(l => `<option value="${l.id}">${l.type_name}</option>`).join('');
+            } catch (e) {
+                console.error('加载图层失败:', e);
+            }
+        }
+
+        // 加载点位列表
+        async function loadPoints() {
+            const layerType = document.getElementById('layerFilter').value;
+            const county = document.getElementById('countyFilter').value;
+            const keyword = document.getElementById('keywordFilter').value;
+
+            const params = new URLSearchParams({
+                page: currentPage,
+                limit: 20,
+                ...(layerType && {layer_type_id: layerType}),
+                ...(county && {county: county}),
+                ...(keyword && {keyword: keyword})
+            });
+
+            try {
+                const res = await fetch(`/charging/admin/api/points?${params}`);
+                const data = await res.json();
+
+                const tbody = document.getElementById('pointTable');
+                if (!data.items || data.items.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">暂无数据</td></tr>';
+                    document.getElementById('pagination').style.display = 'none';
+                    return;
+                }
+
+                // 收集县区
+                data.items.forEach(p => {
+                    if (p.county) counties.add(p.county);
+                });
+                updateCountyFilter();
+
+                // 渲染表格
+                tbody.innerHTML = data.items.map(p => `
+                    <tr>
+                        <td><input type="checkbox" class="point-checkbox" value="${p.id}" onchange="updateBatchDeleteButton()"></td>
+                        <td>${p.id}</td>
+                        <td>${p.point_name || '-'}</td>
+                        <td>${p.type_name || '-'}</td>
+                        <td>${p.county || '-'}</td>
+                        <td>${p.township || '-'}</td>
+                        <td>${p.longitude ? p.longitude.toFixed(4) : '-'}</td>
+                        <td>${p.latitude ? p.latitude.toFixed(4) : '-'}</td>
+                        <td class="actions">
+                            <a href="#" onclick="viewPoint(${p.id}); return false;">查看</a>
+                            <a href="/charging/admin/map-editor?point_id=${p.id}" class="delete">编辑</a>
+                            <a href="#" onclick="deletePoint(${p.id}); return false;" style="color:#dc2626; background:#fef0f0;">删除</a>
+                        </td>
+                    </tr>
+                `).join('');
+
+                // 更新分页
+                totalPages = data.total_pages || 0;
+                document.getElementById('pagination').style.display = 'flex';
+                document.getElementById('paginationInfo').textContent =
+                    `共 ${data.total || 0} 条，第 ${data.page || 1}/${totalPages} 页`;
+                document.getElementById('prevBtn').disabled = currentPage <= 1;
+                document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+
+            } catch (e) {
+                console.error('加载失败:', e);
+                document.getElementById('pointTable').innerHTML = '<tr><td colspan="8" class="empty-state">加载失败</td></tr>';
+            }
+        }
+
+        // 更新县区过滤器
+        function updateCountyFilter() {
+            const select = document.getElementById('countyFilter');
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">全部县区</option>' +
+                Array.from(counties).map(c => `<option value="${c}">${c}</option>`).join('');
+            select.value = currentValue;
+        }
+
+        // 分页
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                loadPoints();
+            }
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadPoints();
+            }
+        }
+
+        // 查看点位详情
+        async function viewPoint(id) {
+            try {
+                const res = await fetch(`/charging/admin/api/points/${id}`);
+                const data = await res.json();
+
+                if (data.success && data.point) {
+                    const p = data.point;
+                    const attrs = p.attributes || {};
+
+                    document.getElementById('pointDetail').innerHTML = `
+                        <div class="form-group">
+                            <label>点位名称</label>
+                            <div>${p.point_name || '-'}</div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>图层类型</label>
+                                <div>${p.type_name || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>ID</label>
+                                <div>${p.id}</div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>县区</label>
+                                <div>${p.county || '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>乡镇</label>
+                                <div>${p.township || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>经度</label>
+                                <div>${p.longitude ? p.longitude.toFixed(6) : '-'}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>纬度</label>
+                                <div>${p.latitude ? p.latitude.toFixed(6) : '-'}</div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>属性数据</label>
+                            <pre style="background:#f5f5f5; padding:12px; border-radius:6px; overflow-x:auto">${JSON.stringify(attrs, null, 2)}</pre>
+                        </div>
+                        ${p.memo ? `<div class="form-group"><label>备注</label><div>${p.memo}</div></div>` : ''}
+                    `;
+                    document.getElementById('editPointBtn').href = `/charging/admin/map-editor?point_id=${id}`;
+                    document.getElementById('pointModal').classList.add('active');
+                }
+            } catch (e) {
+                alert('加载失败：' + e.message);
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('pointModal').classList.remove('active');
+        }
+
+        // 删除单个点位
+        async function deletePoint(id) {
+            if (!confirm('确定要删除此点位吗？')) return;
+
+            try {
+                const res = await fetch(`/charging/admin/api/points/${id}`, { method: 'DELETE' });
+                const result = await res.json();
+                if (result.success) {
+                    alert('删除成功');
+                    loadPoints();
+                } else {
+                    alert('删除失败：' + (result.error || '未知错误'));
+                }
+            } catch (e) {
+                alert('删除失败：' + e.message);
+            }
+        }
+
+        // 全选/取消全选
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.point-checkbox');
+            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+            updateBatchDeleteButton();
+        }
+
+        // 更新批量删除按钮状态
+        function updateBatchDeleteButton() {
+            const selectedIds = getSelectedPointIds();
+            const batchDeleteBtn = document.getElementById('batchDeleteBtn');
+            if (selectedIds.length > 0) {
+                batchDeleteBtn.style.display = 'inline-flex';
+                batchDeleteBtn.textContent = `🗑️ 批量删除 (${selectedIds.length})`;
+            } else {
+                batchDeleteBtn.style.display = 'none';
+            }
+        }
+
+        // 获取选中的点位 ID
+        function getSelectedPointIds() {
+            const checkboxes = document.querySelectorAll('.point-checkbox:checked');
+            return Array.from(checkboxes).map(cb => parseInt(cb.value));
+        }
+
+        // 批量删除
+        async function batchDelete() {
+            const selectedIds = getSelectedPointIds();
+            if (selectedIds.length === 0) {
+                alert('请先选择要删除的点位');
+                return;
+            }
+
+            if (!confirm(`确定要删除选中的 ${selectedIds.length} 个点位吗？此操作不可恢复！`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch('/charging/admin/api/points/batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'delete',
+                        point_ids: selectedIds
+                    })
+                });
+
+                const result = await res.json();
+                if (result.success) {
+                    alert(`成功删除 ${result.deleted_count || selectedIds.length} 条记录`);
+                    document.getElementById('selectAll').checked = false;
+                    updateBatchDeleteButton();
+                    loadPoints();
+                } else {
+                    alert('批量删除失败：' + (result.error || '未知错误'));
+                }
+            } catch (e) {
+                alert('批量删除失败：' + e.message);
+            }
+        }
+
+        // 初始化
+        loadLayers();
+        loadPoints();
+    </script>
+</body>
+</html>

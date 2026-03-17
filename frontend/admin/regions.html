@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>地区管理 - 后台管理系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 24px; font-weight: 600; }
+        .header nav { display: flex; gap: 20px; }
+        .header nav a { color: white; text-decoration: none; padding: 8px 16px; border-radius: 6px; }
+        .header nav a:hover { background: rgba(255,255,255,0.2); }
+        .container { max-width: 1200px; margin: 0 auto; padding: 30px; }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a6fd6; }
+        .btn-secondary { background: #e0e0e0; color: #333; }
+
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-weight: 600; color: #555; font-size: 13px; }
+        tr:hover { background: #f8f9fa; }
+        .actions { display: flex; gap: 8px; }
+        .actions a {
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            text-decoration: none;
+            color: #667eea;
+            background: #f0f0ff;
+        }
+        .actions a:hover { background: #e0e0ff; }
+        .actions a.delete { color: #dc2626; background: #fef0f0; }
+        .actions a.delete:hover { background: #fee0e0; }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h3 { font-size: 18px; }
+        .modal-header .close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+        .modal-body { padding: 20px; }
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #555;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .form-group input:focus { outline: none; border-color: #667eea; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .badge-active { background: #d4edda; color: #155724; }
+        .badge-inactive { background: #e0e0e0; color: #666; }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+        .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>地区管理</h1>
+        <nav>
+            <a href="/charging/admin/">首页</a>
+            <a href="/charging/admin/regions" style="background: rgba(255,255,255,0.2);">地区管理</a>
+            <a href="/charging/admin/layers">图层管理</a>
+            <a href="/charging/admin/points">点位管理</a>
+            <a href="/">返回前端</a>
+        </nav>
+    </div>
+
+    <div class="container">
+        <div class="toolbar">
+            <h2>地区列表</h2>
+            <div>
+                <button class="btn btn-secondary" onclick="syncRegions()">🔄 同步配置</button>
+                <button class="btn btn-primary" onclick="showAddModal()">➕ 新增地区</button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>县名</th>
+                        <th>Key</th>
+                        <th>行政代码</th>
+                        <th>中心坐标</th>
+                        <th>省份</th>
+                        <th>城市</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="regionTable">
+                    <tr><td colspan="8" class="empty-state">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 新增/编辑 Modal -->
+    <div class="modal" id="regionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">新增地区</h3>
+                <button class="close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="regionForm">
+                    <input type="hidden" id="regionId">
+                    <div class="form-group">
+                        <label>县名 *</label>
+                        <input type="text" id="name" required placeholder="例如：弋阳县">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Key *</label>
+                            <input type="text" id="key" required placeholder="例如：yiyang">
+                        </div>
+                        <div class="form-group">
+                            <label>行政代码</label>
+                            <input type="text" id="adcode" placeholder="例如：361126">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>经度</label>
+                            <input type="number" step="0.0001" id="lng" placeholder="117.44">
+                        </div>
+                        <div class="form-group">
+                            <label>纬度</label>
+                            <input type="number" step="0.0001" id="lat" placeholder="28.37">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>省份</label>
+                            <input type="text" id="province" placeholder="江西省">
+                        </div>
+                        <div class="form-group">
+                            <label>城市</label>
+                            <input type="text" id="city" placeholder="上饶市">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>状态</label>
+                        <select id="isActive">
+                            <option value="1">启用</option>
+                            <option value="0">停用</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveRegion()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let regions = [];
+
+        // 加载地区列表
+        async function loadRegions() {
+            try {
+                const res = await fetch('/charging/admin/api/regions');
+                const data = await res.json();
+                regions = data.regions || [];
+                renderTable();
+            } catch (e) {
+                console.error('加载失败:', e);
+                document.getElementById('regionTable').innerHTML = '<tr><td colspan="8" class="empty-state">加载失败</td></tr>';
+            }
+        }
+
+        // 渲染表格
+        function renderTable() {
+            const tbody = document.getElementById('regionTable');
+            if (regions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">暂无数据<br><button class="btn btn-primary" style="margin-top:16px" onclick="showAddModal()">➕ 新增地区</button></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = regions.map(r => `
+                <tr>
+                    <td>${r.name || '-'}</td>
+                    <td><code>${r.key || '-'}</code></td>
+                    <td>${r.adcode || '-'}</td>
+                    <td>${r.center ? r.center.join(', ') : '-'}</td>
+                    <td>${r.province || '-'}</td>
+                    <td>${r.city || '-'}</td>
+                    <td><span class="badge ${r.is_active ? 'badge-active' : 'badge-inactive'}">${r.is_active ? '启用' : '停用'}</span></td>
+                    <td class="actions">
+                        <a href="#" onclick="editRegion(${r.id}); return false;">编辑</a>
+                        <a href="#" class="delete" onclick="deleteRegion(${r.id}, '${r.name}'); return false;">删除</a>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 显示新增 Modal
+        function showAddModal() {
+            document.getElementById('modalTitle').textContent = '新增地区';
+            document.getElementById('regionForm').reset();
+            document.getElementById('regionId').value = '';
+            document.getElementById('regionModal').classList.add('active');
+        }
+
+        // 编辑地区
+        function editRegion(id) {
+            const region = regions.find(r => r.id === id);
+            if (!region) return;
+
+            document.getElementById('modalTitle').textContent = '编辑地区';
+            document.getElementById('regionId').value = region.id;
+            document.getElementById('name').value = region.name || '';
+            document.getElementById('key').value = region.key || '';
+            document.getElementById('adcode').value = region.adcode || '';
+            document.getElementById('province').value = region.province || '';
+            document.getElementById('city').value = region.city || '';
+            document.getElementById('isActive').value = region.is_active ? '1' : '0';
+
+            if (region.center && Array.isArray(region.center)) {
+                document.getElementById('lng').value = region.center[0];
+                document.getElementById('lat').value = region.center[1];
+            }
+
+            document.getElementById('regionModal').classList.add('active');
+        }
+
+        // 关闭 Modal
+        function closeModal() {
+            document.getElementById('regionModal').classList.remove('active');
+        }
+
+        // 保存地区
+        async function saveRegion() {
+            const id = document.getElementById('regionId').value;
+            const data = {
+                name: document.getElementById('name').value,
+                key: document.getElementById('key').value,
+                adcode: document.getElementById('adcode').value,
+                province: document.getElementById('province').value,
+                city: document.getElementById('city').value,
+                is_active: document.getElementById('isActive').value === '1'
+            };
+
+            const lng = parseFloat(document.getElementById('lng').value);
+            const lat = parseFloat(document.getElementById('lat').value);
+            if (lng && lat) {
+                data.center = [lng, lat];
+            }
+
+            try {
+                const url = id ? `/charging/admin/api/regions/${id}` : '/charging/admin/api/regions';
+                const method = id ? 'PUT' : 'POST';
+
+                const res = await fetch(url, {
+                    method: method,
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+
+                const result = await res.json();
+                if (result.success) {
+                    alert('保存成功');
+                    closeModal();
+                    loadRegions();
+                } else {
+                    alert('保存失败：' + (result.error || '未知错误'));
+                }
+            } catch (e) {
+                alert('保存失败：' + e.message);
+            }
+        }
+
+        // 删除地区
+        async function deleteRegion(id, name) {
+            if (!confirm(`确定要删除地区 "${name}" 吗？此操作不可恢复。`)) return;
+
+            try {
+                const res = await fetch(`/charging/admin/api/regions/${id}`, {method: 'DELETE'});
+                const result = await res.json();
+                if (result.success) {
+                    alert('删除成功');
+                    loadRegions();
+                } else {
+                    alert('删除失败：' + (result.error || '可能有关联数据'));
+                }
+            } catch (e) {
+                alert('删除失败：' + e.message);
+            }
+        }
+
+        // 同步配置
+        async function syncRegions() {
+            if (!confirm('确定要从 config.py 同步地区配置吗？')) return;
+
+            try {
+                const res = await fetch('/charging/admin/api/regions/sync', {method: 'POST'});
+                const result = await res.json();
+                if (result.success) {
+                    alert(`同步完成：新建 ${result.result.created} 个，更新 ${result.result.updated} 个`);
+                    loadRegions();
+                }
+            } catch (e) {
+                alert('同步失败：' + e.message);
+            }
+        }
+
+        // 初始化
+        loadRegions();
+    </script>
+</body>
+</html>
