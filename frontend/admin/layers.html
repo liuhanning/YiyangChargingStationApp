@@ -1,0 +1,415 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鍥惧眰绠＄悊 - 鍚庡彴绠＄悊绯荤粺</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 24px; font-weight: 600; }
+        .header nav { display: flex; gap: 20px; }
+        .header nav a { color: white; text-decoration: none; padding: 8px 16px; border-radius: 6px; }
+        .header nav a:hover { background: rgba(255,255,255,0.2); }
+        .container { max-width: 1400px; margin: 0 auto; padding: 30px; }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-secondary { background: #e0e0e0; color: #333; }
+
+        /* 鍥惧眰鍗＄墖缃戞牸 */
+        .layer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        .layer-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .layer-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+        .layer-card-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .layer-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+        .layer-info { flex: 1; }
+        .layer-info h3 { font-size: 18px; margin-bottom: 4px; }
+        .layer-info p { font-size: 13px; color: #666; }
+        .layer-stats {
+            display: flex;
+            gap: 16px;
+            margin: 16px 0;
+            padding: 12px 0;
+            border-top: 1px solid #eee;
+            border-bottom: 1px solid #eee;
+        }
+        .layer-stat { text-align: center; }
+        .layer-stat .value { font-size: 20px; font-weight: 700; color: #667eea; }
+        .layer-stat .label { font-size: 12px; color: #999; }
+        .layer-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .layer-actions a {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .btn-fields { background: #f0f0ff; color: #667eea; }
+        .btn-fields:hover { background: #e0e0ff; }
+        .btn-viz { background: #fef3c7; color: #92400e; }
+        .btn-viz:hover { background: #fde68a; }
+        .btn-delete { background: #fef0f0; color: #dc2626; }
+        .btn-delete:hover { background: #fee0e0; }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h3 { font-size: 18px; }
+        .modal-header .close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+        .modal-body { padding: 20px; }
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; color: #555; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+        .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>鍥惧眰绫诲瀷绠＄悊</h1>
+        <nav>
+            <a href="/charging/admin/">棣栭〉</a>
+            <a href="/charging/admin/regions">鍦板尯绠＄悊</a>
+            <a href="/charging/admin/layers" style="background: rgba(255,255,255,0.2);">鍥惧眰绠＄悊</a>
+            <a href="/charging/admin/points">鐐逛綅绠＄悊</a>
+            <a href="/">杩斿洖鍓嶇</a>
+        </nav>
+    </div>
+
+    <div class="container">
+        <div class="toolbar">
+            <h2>鍥惧眰绫诲瀷鍒楄〃</h2>
+            <button class="btn btn-primary" onclick="showAddModal()">鉃?鏂板鍥惧眰绫诲瀷</button>
+        </div>
+
+        <div class="layer-grid" id="layerGrid">
+            <div class="empty-state"><div class="icon">鈴?/div>鍔犺浇涓?..</div>
+        </div>
+    </div>
+
+    <!-- 鏂板/缂栬緫 Modal -->
+    <div class="modal" id="layerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">鏂板鍥惧眰绫诲瀷</h3>
+                <button class="close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="layerForm">
+                    <input type="hidden" id="layerId">
+                    <div class="form-group">
+                        <label>绫诲瀷鏍囪瘑 (Key) *</label>
+                        <input type="text" id="typeKey" required placeholder="渚嬪锛歩ndustrial_park" pattern="[a-z_]+">
+                        <small style="color:#999; font-size:12px">浠呮敮鎸佸皬鍐欏瓧姣嶅拰涓嬪垝绾?/small>
+                    </div>
+                    <div class="form-group">
+                        <label>绫诲瀷鍚嶇О *</label>
+                        <input type="text" id="typeName" required placeholder="渚嬪锛氫骇涓氬洯">
+                    </div>
+                    <div class="form-group">
+                        <label>鎻忚堪</label>
+                        <textarea id="description" rows="3" placeholder="渚嬪锛氬悇绫诲伐涓氬洯鍖恒€佷骇涓氬洯鍖?></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>鍥炬爣</label>
+                            <select id="icon">
+                                <option value="circle">鍦嗗舰 (circle)</option>
+                                <option value="square">鏂瑰舰 (square)</option>
+                                <option value="triangle">涓夎褰?(triangle)</option>
+                                <option value="star">鏄熷舰 (star)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>榛樿棰滆壊</label>
+                            <input type="color" id="color" value="#2563EB" style="height:42px">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>鐘舵€?/label>
+                        <select id="isActive">
+                            <option value="1">鍚敤</option>
+                            <option value="0">鍋滅敤</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">鍙栨秷</button>
+                <button class="btn btn-primary" onclick="saveLayer()">淇濆瓨</button>
+            </div>
+        </div>
+    </div>
+
+            <script>
+        let layers = [];
+        let pendingRequests = 0;
+
+        function setLoading(isLoading) {
+            pendingRequests += isLoading ? 1 : -1;
+            if (pendingRequests < 0) pendingRequests = 0;
+            document.body.style.cursor = pendingRequests > 0 ? 'progress' : '';
+        }
+
+        function notify(message, type = 'info') {
+            const containerId = 'admin-toast-container';
+            let container = document.getElementById(containerId);
+            if (!container) {
+                container = document.createElement('div');
+                container.id = containerId;
+                container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:3000;display:flex;flex-direction:column;gap:8px;max-width:320px;';
+                document.body.appendChild(container);
+            }
+
+            const bgMap = { success: '#16a34a', error: '#dc2626', info: '#334155' };
+            const toast = document.createElement('div');
+            toast.style.cssText = `padding:10px 12px;border-radius:8px;color:#fff;background:${bgMap[type] || bgMap.info};box-shadow:0 6px 16px rgba(0,0,0,0.2);font-size:13px;line-height:1.4;`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3200);
+        }
+
+        async function loadLayers() {
+            setLoading(true);
+            try {
+                const res = await fetch('/charging/admin/api/layers');
+                const data = await res.json();
+                layers = data.layers || [];
+                renderGrid();
+            } catch (e) {
+                console.error('Load layers failed:', e);
+                document.getElementById('layerGrid').innerHTML = '<div class="empty-state"><div class="icon">X</div>Load failed</div>';
+                notify(`Load failed: ${e.message}`, 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function renderGrid() {
+            const container = document.getElementById('layerGrid');
+            if (layers.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="icon">O</div>No layer type<br><button class="btn btn-primary" style="margin-top:16px" onclick="showAddModal()">+ Add Layer</button></div>';
+                return;
+            }
+
+            const iconMap = {
+                circle: 'O',
+                square: 'S',
+                triangle: 'T',
+                star: '*'
+            };
+
+            container.innerHTML = layers.map(layer => `
+                <div class="layer-card">
+                    <div class="layer-card-header">
+                        <div class="layer-icon" style="background: ${layer.color}20">
+                            ${iconMap[layer.icon] || 'O'}
+                        </div>
+                        <div class="layer-info">
+                            <h3>${layer.type_name}</h3>
+                            <p><code>${layer.type_key}</code></p>
+                        </div>
+                    </div>
+                    <p style="color:#666; font-size:14px; margin-bottom:12px">${layer.description || 'No description'}</p>
+                    <div class="layer-stats">
+                        <div class="layer-stat">
+                            <div class="value">${layer.point_count || 0}</div>
+                            <div class="label">Points</div>
+                        </div>
+                        <div class="layer-stat">
+                            <div class="value">${layer.field_count || 0}</div>
+                            <div class="label">Fields</div>
+                        </div>
+                    </div>
+                    <div class="layer-actions">
+                        <a href="/charging/admin/fields?layer_id=${layer.id}" class="btn-fields">Fields</a>
+                        <a href="/charging/admin/map-editor?layer_id=${layer.id}" class="btn-viz">Visual</a>
+                        <a href="#" class="btn-delete" onclick="deleteLayer(${layer.id}); return false;">Delete</a>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add Layer Type';
+            document.getElementById('layerForm').reset();
+            document.getElementById('layerId').value = '';
+            document.getElementById('layerModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('layerModal').classList.remove('active');
+        }
+
+        async function saveLayer() {
+            const id = document.getElementById('layerId').value;
+            const data = {
+                type_key: document.getElementById('typeKey').value,
+                type_name: document.getElementById('typeName').value,
+                description: document.getElementById('description').value,
+                icon: document.getElementById('icon').value,
+                color: document.getElementById('color').value,
+                is_active: document.getElementById('isActive').value === '1'
+            };
+
+            setLoading(true);
+            try {
+                const url = id ? `/charging/admin/api/layers/${id}` : '/charging/admin/api/layers';
+                const method = id ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method,
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+
+                const result = await res.json();
+                if (result.success) {
+                    notify('Saved', 'success');
+                    closeModal();
+                    loadLayers();
+                } else {
+                    notify(`Save failed: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (e) {
+                notify(`Save failed: ${e.message}`, 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function deleteLayer(id) {
+            if (!confirm('Delete this layer type?')) return;
+
+            setLoading(true);
+            try {
+                const res = await fetch(`/charging/admin/api/layers/${id}`, {method: 'DELETE'});
+                const result = await res.json();
+                if (result.success) {
+                    notify('Deleted', 'success');
+                    loadLayers();
+                } else {
+                    notify(`Delete failed: ${result.error || 'Related data exists'}`, 'error');
+                }
+            } catch (e) {
+                notify(`Delete failed: ${e.message}`, 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        loadLayers();
+    </script>
+</body>
+</html>
+
+
+

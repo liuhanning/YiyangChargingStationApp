@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>地区管理 - 后台管理系统</title>
+    <title>鍦板尯绠＄悊 - 鍚庡彴绠＄悊绯荤粺</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -146,22 +146,22 @@
 </head>
 <body>
     <div class="header">
-        <h1>地区管理</h1>
+        <h1>鍦板尯绠＄悊</h1>
         <nav>
-            <a href="/charging/admin/">首页</a>
-            <a href="/charging/admin/regions" style="background: rgba(255,255,255,0.2);">地区管理</a>
-            <a href="/charging/admin/layers">图层管理</a>
-            <a href="/charging/admin/points">点位管理</a>
-            <a href="/">返回前端</a>
+            <a href="/charging/admin/">棣栭〉</a>
+            <a href="/charging/admin/regions" style="background: rgba(255,255,255,0.2);">鍦板尯绠＄悊</a>
+            <a href="/charging/admin/layers">鍥惧眰绠＄悊</a>
+            <a href="/charging/admin/points">鐐逛綅绠＄悊</a>
+            <a href="/">杩斿洖鍓嶇</a>
         </nav>
     </div>
 
     <div class="container">
         <div class="toolbar">
-            <h2>地区列表</h2>
+            <h2>鍦板尯鍒楄〃</h2>
             <div>
-                <button class="btn btn-secondary" onclick="syncRegions()">🔄 同步配置</button>
-                <button class="btn btn-primary" onclick="showAddModal()">➕ 新增地区</button>
+                <button class="btn btn-secondary" onclick="syncRegions()">馃攧 鍚屾閰嶇疆</button>
+                <button class="btn btn-primary" onclick="showAddModal()">鉃?鏂板鍦板尯</button>
             </div>
         </div>
 
@@ -169,104 +169,131 @@
             <table>
                 <thead>
                     <tr>
-                        <th>县名</th>
+                        <th>鍘垮悕</th>
                         <th>Key</th>
-                        <th>行政代码</th>
-                        <th>中心坐标</th>
-                        <th>省份</th>
-                        <th>城市</th>
-                        <th>状态</th>
-                        <th>操作</th>
+                        <th>琛屾斂浠ｇ爜</th>
+                        <th>涓績鍧愭爣</th>
+                        <th>鐪佷唤</th>
+                        <th>鍩庡競</th>
+                        <th>鐘舵€?/th>
+                        <th>鎿嶄綔</th>
                     </tr>
                 </thead>
                 <tbody id="regionTable">
-                    <tr><td colspan="8" class="empty-state">加载中...</td></tr>
+                    <tr><td colspan="8" class="empty-state">鍔犺浇涓?..</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- 新增/编辑 Modal -->
+    <!-- 鏂板/缂栬緫 Modal -->
     <div class="modal" id="regionModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="modalTitle">新增地区</h3>
+                <h3 id="modalTitle">鏂板鍦板尯</h3>
                 <button class="close" onclick="closeModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="regionForm">
                     <input type="hidden" id="regionId">
                     <div class="form-group">
-                        <label>县名 *</label>
-                        <input type="text" id="name" required placeholder="例如：弋阳县">
+                        <label>鍘垮悕 *</label>
+                        <input type="text" id="name" required placeholder="渚嬪锛氬紜闃冲幙">
                     </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label>Key *</label>
-                            <input type="text" id="key" required placeholder="例如：yiyang">
+                            <input type="text" id="key" required placeholder="渚嬪锛歽iyang">
                         </div>
                         <div class="form-group">
-                            <label>行政代码</label>
-                            <input type="text" id="adcode" placeholder="例如：361126">
+                            <label>琛屾斂浠ｇ爜</label>
+                            <input type="text" id="adcode" placeholder="渚嬪锛?61126">
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>经度</label>
+                            <label>缁忓害</label>
                             <input type="number" step="0.0001" id="lng" placeholder="117.44">
                         </div>
                         <div class="form-group">
-                            <label>纬度</label>
+                            <label>绾害</label>
                             <input type="number" step="0.0001" id="lat" placeholder="28.37">
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>省份</label>
-                            <input type="text" id="province" placeholder="江西省">
+                            <label>鐪佷唤</label>
+                            <input type="text" id="province" placeholder="姹熻タ鐪?>
                         </div>
                         <div class="form-group">
-                            <label>城市</label>
-                            <input type="text" id="city" placeholder="上饶市">
+                            <label>鍩庡競</label>
+                            <input type="text" id="city" placeholder="涓婇ザ甯?>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>状态</label>
+                        <label>鐘舵€?/label>
                         <select id="isActive">
-                            <option value="1">启用</option>
-                            <option value="0">停用</option>
+                            <option value="1">鍚敤</option>
+                            <option value="0">鍋滅敤</option>
                         </select>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
-                <button class="btn btn-primary" onclick="saveRegion()">保存</button>
+                <button class="btn btn-secondary" onclick="closeModal()">鍙栨秷</button>
+                <button class="btn btn-primary" onclick="saveRegion()">淇濆瓨</button>
             </div>
         </div>
     </div>
 
-    <script>
+        <script>
         let regions = [];
+        let pendingRequests = 0;
 
-        // 加载地区列表
+        function setLoading(isLoading) {
+            pendingRequests += isLoading ? 1 : -1;
+            if (pendingRequests < 0) pendingRequests = 0;
+            document.body.style.cursor = pendingRequests > 0 ? 'progress' : '';
+        }
+
+        function notify(message, type = 'info') {
+            const containerId = 'admin-toast-container';
+            let container = document.getElementById(containerId);
+            if (!container) {
+                container = document.createElement('div');
+                container.id = containerId;
+                container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:3000;display:flex;flex-direction:column;gap:8px;max-width:320px;';
+                document.body.appendChild(container);
+            }
+
+            const bgMap = { success: '#16a34a', error: '#dc2626', info: '#334155' };
+            const toast = document.createElement('div');
+            toast.style.cssText = `padding:10px 12px;border-radius:8px;color:#fff;background:${bgMap[type] || bgMap.info};box-shadow:0 6px 16px rgba(0,0,0,0.2);font-size:13px;line-height:1.4;`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3200);
+        }
+
         async function loadRegions() {
+            setLoading(true);
             try {
                 const res = await fetch('/charging/admin/api/regions');
                 const data = await res.json();
                 regions = data.regions || [];
                 renderTable();
             } catch (e) {
-                console.error('加载失败:', e);
-                document.getElementById('regionTable').innerHTML = '<tr><td colspan="8" class="empty-state">加载失败</td></tr>';
+                console.error('Load regions failed:', e);
+                document.getElementById('regionTable').innerHTML = '<tr><td colspan="8" class="empty-state">Load failed</td></tr>';
+                notify(`Load failed: ${e.message}`, 'error');
+            } finally {
+                setLoading(false);
             }
         }
 
-        // 渲染表格
         function renderTable() {
             const tbody = document.getElementById('regionTable');
             if (regions.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">暂无数据<br><button class="btn btn-primary" style="margin-top:16px" onclick="showAddModal()">➕ 新增地区</button></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No data<br><button class="btn btn-primary" style="margin-top:16px" onclick="showAddModal()">+ Add Region</button></td></tr>';
                 return;
             }
 
@@ -278,29 +305,27 @@
                     <td>${r.center ? r.center.join(', ') : '-'}</td>
                     <td>${r.province || '-'}</td>
                     <td>${r.city || '-'}</td>
-                    <td><span class="badge ${r.is_active ? 'badge-active' : 'badge-inactive'}">${r.is_active ? '启用' : '停用'}</span></td>
+                    <td><span class="badge ${r.is_active ? 'badge-active' : 'badge-inactive'}">${r.is_active ? 'Active' : 'Inactive'}</span></td>
                     <td class="actions">
-                        <a href="#" onclick="editRegion(${r.id}); return false;">编辑</a>
-                        <a href="#" class="delete" onclick="deleteRegion(${r.id}, '${r.name}'); return false;">删除</a>
+                        <a href="#" onclick="editRegion(${r.id}); return false;">Edit</a>
+                        <a href="#" class="delete" onclick="deleteRegion(${r.id}, decodeURIComponent('${encodeURIComponent(r.name || '')}')); return false;">Delete</a>
                     </td>
                 </tr>
             `).join('');
         }
 
-        // 显示新增 Modal
         function showAddModal() {
-            document.getElementById('modalTitle').textContent = '新增地区';
+            document.getElementById('modalTitle').textContent = 'Add Region';
             document.getElementById('regionForm').reset();
             document.getElementById('regionId').value = '';
             document.getElementById('regionModal').classList.add('active');
         }
 
-        // 编辑地区
         function editRegion(id) {
             const region = regions.find(r => r.id === id);
             if (!region) return;
 
-            document.getElementById('modalTitle').textContent = '编辑地区';
+            document.getElementById('modalTitle').textContent = 'Edit Region';
             document.getElementById('regionId').value = region.id;
             document.getElementById('name').value = region.name || '';
             document.getElementById('key').value = region.key || '';
@@ -317,12 +342,10 @@
             document.getElementById('regionModal').classList.add('active');
         }
 
-        // 关闭 Modal
         function closeModal() {
             document.getElementById('regionModal').classList.remove('active');
         }
 
-        // 保存地区
         async function saveRegion() {
             const id = document.getElementById('regionId').value;
             const data = {
@@ -336,69 +359,79 @@
 
             const lng = parseFloat(document.getElementById('lng').value);
             const lat = parseFloat(document.getElementById('lat').value);
-            if (lng && lat) {
+            if (!Number.isNaN(lng) && !Number.isNaN(lat)) {
                 data.center = [lng, lat];
             }
 
+            setLoading(true);
             try {
                 const url = id ? `/charging/admin/api/regions/${id}` : '/charging/admin/api/regions';
                 const method = id ? 'PUT' : 'POST';
-
                 const res = await fetch(url, {
-                    method: method,
+                    method,
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(data)
                 });
 
                 const result = await res.json();
                 if (result.success) {
-                    alert('保存成功');
+                    notify('Saved', 'success');
                     closeModal();
                     loadRegions();
                 } else {
-                    alert('保存失败：' + (result.error || '未知错误'));
+                    notify(`Save failed: ${result.error || 'Unknown error'}`, 'error');
                 }
             } catch (e) {
-                alert('保存失败：' + e.message);
+                notify(`Save failed: ${e.message}`, 'error');
+            } finally {
+                setLoading(false);
             }
         }
 
-        // 删除地区
         async function deleteRegion(id, name) {
-            if (!confirm(`确定要删除地区 "${name}" 吗？此操作不可恢复。`)) return;
+            if (!confirm(`Delete region \"${name}\"?`)) return;
 
+            setLoading(true);
             try {
                 const res = await fetch(`/charging/admin/api/regions/${id}`, {method: 'DELETE'});
                 const result = await res.json();
                 if (result.success) {
-                    alert('删除成功');
+                    notify('Deleted', 'success');
                     loadRegions();
                 } else {
-                    alert('删除失败：' + (result.error || '可能有关联数据'));
+                    notify(`Delete failed: ${result.error || 'Related data exists'}`, 'error');
                 }
             } catch (e) {
-                alert('删除失败：' + e.message);
+                notify(`Delete failed: ${e.message}`, 'error');
+            } finally {
+                setLoading(false);
             }
         }
 
-        // 同步配置
         async function syncRegions() {
-            if (!confirm('确定要从 config.py 同步地区配置吗？')) return;
+            if (!confirm('Sync regions from config?')) return;
 
+            setLoading(true);
             try {
                 const res = await fetch('/charging/admin/api/regions/sync', {method: 'POST'});
                 const result = await res.json();
                 if (result.success) {
-                    alert(`同步完成：新建 ${result.result.created} 个，更新 ${result.result.updated} 个`);
+                    const created = result.result?.created ?? 0;
+                    const updated = result.result?.updated ?? 0;
+                    notify(`Sync done: created ${created}, updated ${updated}`, 'success');
                     loadRegions();
+                } else {
+                    notify(`Sync failed: ${result.error || 'Unknown error'}`, 'error');
                 }
             } catch (e) {
-                alert('同步失败：' + e.message);
+                notify(`Sync failed: ${e.message}`, 'error');
+            } finally {
+                setLoading(false);
             }
         }
 
-        // 初始化
         loadRegions();
     </script>
 </body>
 </html>
+

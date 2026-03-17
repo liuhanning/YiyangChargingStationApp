@@ -1,0 +1,672 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>瀛楁閰嶇疆 - 鍚庡彴绠＄悊绯荤粺</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 24px; font-weight: 600; }
+        .header nav { display: flex; gap: 20px; }
+        .header nav a { color: white; text-decoration: none; padding: 8px 16px; border-radius: 6px; }
+        .header nav a:hover { background: rgba(255,255,255,0.2); }
+        .container { max-width: 1200px; margin: 0 auto; padding: 30px; }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+        .breadcrumb a { color: #667eea; text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .card-header h2 { font-size: 18px; color: #333; }
+
+        .layer-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .layer-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        .layer-details h3 { font-size: 16px; margin-bottom: 4px; }
+        .layer-details p { font-size: 13px; color: #666; }
+
+        .field-list {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .field-item {
+            display: grid;
+            grid-template-columns: 60px 1fr 120px 100px 80px 120px;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid #eee;
+            gap: 16px;
+            transition: background 0.2s;
+        }
+        .field-item:hover { background: #f8f9fa; }
+        .field-item:last-child { border-bottom: none; }
+        .field-item .header {
+            background: #f8f9fa;
+            font-weight: 600;
+            font-size: 13px;
+            color: #555;
+        }
+        .field-item .drag-handle {
+            cursor: move;
+            color: #999;
+            font-size: 18px;
+            user-select: none;
+        }
+        .field-item .field-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .field-item .field-name { font-weight: 500; }
+        .field-item .field-key { font-size: 12px; color: #999; font-family: monospace; }
+        .field-item .field-type {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .field-type.text { background: #e0e7ff; color: #4338ca; }
+        .field-type.number { background: #d4edda; color: #155724; }
+        .field-type.select { background: #fff3cd; color: #856404; }
+        .field-type.boolean { background: #f8d7da; color: #721c24; }
+        .field-type.date { background: #e7f3ff; color: #0c5460; }
+        .field-item .field-flags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .field-item .flag {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .flag.required { background: #fee2e2; color: #dc2626; }
+        .flag.display { background: #dbeafe; color: #1d4ed8; }
+        .flag.visual { background: #fef3c7; color: #92400e; }
+        .field-item .actions {
+            display: flex;
+            gap: 8px;
+        }
+        .field-item .actions button {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+        .btn-edit { background: #f0f0ff; color: #667eea; }
+        .btn-edit:hover { background: #e0e0ff; }
+        .btn-delete { background: #fef0f0; color: #dc2626; }
+        .btn-delete:hover { background: #fee0e0; }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a6fd6; }
+        .btn-secondary { background: #e0e0e0; color: #333; }
+        .btn-secondary:hover { background: #d0d0d0; }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 550px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h3 { font-size: 18px; }
+        .modal-header .close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+        .modal-body { padding: 20px; }
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #555;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .form-group small {
+            display: block;
+            margin-top: 4px;
+            color: #999;
+            font-size: 12px;
+        }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .checkbox-group {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 400;
+            cursor: pointer;
+        }
+
+        .viz-btn {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+        .viz-btn:hover { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>瀛楁閰嶇疆</h1>
+        <nav>
+            <a href="/charging/admin/">棣栭〉</a>
+            <a href="/charging/admin/regions">鍦板尯绠＄悊</a>
+            <a href="/charging/admin/layers">鍥惧眰绠＄悊</a>
+            <a href="/charging/admin/points">鐐逛綅绠＄悊</a>
+            <a href="/charging/admin/import">鏁版嵁瀵煎叆</a>
+            <a href="/">杩斿洖鍓嶇</a>
+        </nav>
+    </div>
+
+    <div class="container">
+        <div class="breadcrumb">
+            <a href="/charging/admin/layers">鍥惧眰绠＄悊</a>
+            <span>/</span>
+            <span id="breadcrumbLayer">瀛楁閰嶇疆</span>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>瀛楁鍒楄〃</h2>
+                <div>
+                    <a href="#" class="btn viz-btn" id="vizConfigBtn" style="margin-right: 12px;">馃帹 鍙鍖栬鍒?/a>
+                    <button class="btn btn-primary" onclick="showAddModal()">鉃?鏂板瀛楁</button>
+                </div>
+            </div>
+
+            <div class="layer-info" id="layerInfo" style="display: none;">
+                <div class="layer-icon" id="layerIcon"></div>
+                <div class="layer-details">
+                    <h3 id="layerName"></h3>
+                    <p id="layerDescription"></p>
+                </div>
+            </div>
+
+            <div class="field-list" id="fieldList">
+                <div class="empty-state">
+                    <div class="icon">鈴?/div>
+                    <div>鍔犺浇涓?..</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 鏂板/缂栬緫瀛楁 Modal -->
+    <div class="modal" id="fieldModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">鏂板瀛楁</h3>
+                <button class="close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="fieldForm">
+                    <input type="hidden" id="fieldId">
+                    <div class="form-group">
+                        <label>瀛楁鏍囪瘑 (Key) *</label>
+                        <input type="text" id="fieldKey" required placeholder="渚嬪锛歛rea" pattern="[a-z_]+">
+                        <small>浠呮敮鎸佸皬鍐欏瓧姣嶅拰涓嬪垝绾匡紝鐢ㄤ簬绋嬪簭璁块棶</small>
+                    </div>
+                    <div class="form-group">
+                        <label>瀛楁鍚嶇О *</label>
+                        <input type="text" id="fieldName" required placeholder="渚嬪锛氬崰鍦伴潰绉?>
+                        <small>鏄剧ず鍦ㄧ晫闈笂鐨勫悕绉?/small>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>瀛楁绫诲瀷 *</label>
+                            <select id="fieldType" required onchange="toggleOptions()">
+                                <option value="text">鏂囨湰 (text)</option>
+                                <option value="number">鏁板瓧 (number)</option>
+                                <option value="select">涓嬫媺閫夋嫨 (select)</option>
+                                <option value="boolean">鏄?鍚?(boolean)</option>
+                                <option value="date">鏃ユ湡 (date)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>鍗曚綅</label>
+                            <input type="text" id="fieldUnit" placeholder="渚嬪锛氫憨銆佷竾鍏?>
+                        </div>
+                    </div>
+                    <div class="form-group" id="optionsGroup" style="display: none;">
+                        <label>閫夐」鍒楄〃</label>
+                        <textarea id="fieldOptions" rows="3" placeholder="姣忚涓€涓€夐」锛屼緥濡傦細&#10;鐪佺骇&#10;甯傜骇&#10;鍘跨骇"></textarea>
+                        <small>浠呬笅鎷夐€夋嫨绫诲瀷闇€瑕佸～鍐?/small>
+                    </div>
+                    <div class="form-group">
+                        <label>瀛楁璁剧疆</label>
+                        <div class="checkbox-group">
+                            <label>
+                                <input type="checkbox" id="isRequired">
+                                蹇呭～
+                            </label>
+                            <label>
+                                <input type="checkbox" id="isDisplay" checked>
+                                鍒楄〃鏄剧ず
+                            </label>
+                            <label>
+                                <input type="checkbox" id="isVisual" checked>
+                                鍙彲瑙嗗寲
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>鎺掑簭</label>
+                        <input type="number" id="sortOrder" value="10" min="0">
+                        <small>鏁板瓧瓒婂皬瓒婇潬鍓?/small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">鍙栨秷</button>
+                <button class="btn btn-primary" onclick="saveField()">淇濆瓨</button>
+            </div>
+        </div>
+    </div>
+
+        <script>
+        let layerId = null;
+        let layerData = null;
+        let fields = [];
+        let pendingRequests = 0;
+
+        function setLoading(isLoading) {
+            pendingRequests += isLoading ? 1 : -1;
+            if (pendingRequests < 0) pendingRequests = 0;
+            document.body.style.cursor = pendingRequests > 0 ? 'progress' : '';
+        }
+
+        function notify(message, type = 'info') {
+            const containerId = 'admin-toast-container';
+            let container = document.getElementById(containerId);
+            if (!container) {
+                container = document.createElement('div');
+                container.id = containerId;
+                container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:3000;display:flex;flex-direction:column;gap:8px;max-width:320px;';
+                document.body.appendChild(container);
+            }
+
+            const bgMap = { success: '#16a34a', error: '#dc2626', info: '#334155' };
+            const toast = document.createElement('div');
+            toast.style.cssText = `padding:10px 12px;border-radius:8px;color:#fff;background:${bgMap[type] || bgMap.info};box-shadow:0 6px 16px rgba(0,0,0,0.2);font-size:13px;line-height:1.4;`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3200);
+        }
+
+        function getLayerIdFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('layer_id');
+        }
+
+        async function loadLayerInfo() {
+            if (!layerId) {
+                document.getElementById('fieldList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">X</div>
+                        <div>Please choose a layer type first</div>
+                        <a href="/charging/admin/layers" class="btn btn-primary" style="margin-top: 16px;">Back to layers</a>
+                    </div>
+                `;
+                return;
+            }
+
+            setLoading(true);
+            try {
+                const res = await fetch(`/charging/admin/api/layers/${layerId}`);
+                const data = await res.json();
+                if (data.success && data.layer) {
+                    layerData = data.layer;
+                    document.getElementById('layerInfo').style.display = 'flex';
+                    document.getElementById('layerName').textContent = layerData.type_name;
+                    document.getElementById('layerDescription').textContent = layerData.description || 'No description';
+                    document.getElementById('layerIcon').innerHTML = getIcon(layerData.icon);
+                    document.getElementById('layerIcon').style.background = `${layerData.color}20`;
+                    document.getElementById('layerIcon').style.color = layerData.color;
+                    document.getElementById('breadcrumbLayer').textContent = `${layerData.type_name} - Fields`;
+                    document.getElementById('vizConfigBtn').href = `/charging/admin/viz-config?layer_id=${layerId}`;
+                } else {
+                    notify(data.error || 'Layer not found', 'error');
+                }
+            } catch (e) {
+                console.error('Load layer info failed:', e);
+                notify(`Load failed: ${e.message}`, 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function loadFields() {
+            if (!layerId) return;
+
+            setLoading(true);
+            try {
+                const res = await fetch(`/charging/admin/api/layers/${layerId}/fields`);
+                const data = await res.json();
+                if (data.success) {
+                    fields = data.fields || [];
+                    renderFieldList();
+                } else {
+                    notify(data.error || 'Load fields failed', 'error');
+                }
+            } catch (e) {
+                console.error('Load fields failed:', e);
+                document.getElementById('fieldList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">X</div>
+                        <div>Load failed</div>
+                    </div>
+                `;
+                notify(`Load failed: ${e.message}`, 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function getIcon(icon) {
+            const iconMap = {
+                circle: 'O',
+                square: 'S',
+                triangle: 'T',
+                star: '*'
+            };
+            return iconMap[icon] || 'O';
+        }
+
+        function renderFieldList() {
+            const container = document.getElementById('fieldList');
+            if (fields.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">O</div>
+                        <div>No fields yet</div>
+                        <button class="btn btn-primary" style="margin-top: 16px;" onclick="showAddModal()">+ Add Field</button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="field-item header">
+                    <div>Sort</div>
+                    <div>Field</div>
+                    <div>Type</div>
+                    <div>Unit</div>
+                    <div>Flags</div>
+                    <div>Actions</div>
+                </div>
+                ${fields.map((f) => `
+                    <div class="field-item">
+                        <div class="drag-handle" title="Sort">::</div>
+                        <div class="field-info">
+                            <div class="field-name">${f.field_name}</div>
+                            <div class="field-key">${f.field_key}</div>
+                        </div>
+                        <div><span class="field-type ${f.field_type}">${getFieldTypeName(f.field_type)}</span></div>
+                        <div>${f.field_unit || '-'}</div>
+                        <div class="field-flags">
+                            ${f.is_required ? '<span class="flag required">Required</span>' : ''}
+                            ${f.is_display_field ? '<span class="flag display">List</span>' : ''}
+                            ${f.is_visual_field ? '<span class="flag visual">Visual</span>' : ''}
+                        </div>
+                        <div class="actions">
+                            <button class="btn-edit" onclick="editField(${f.id})">Edit</button>
+                            <button class="btn-delete" onclick="deleteField(${f.id})">Delete</button>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        function getFieldTypeName(type) {
+            const names = {
+                text: 'Text',
+                number: 'Number',
+                select: 'Select',
+                boolean: 'Boolean',
+                date: 'Date'
+            };
+            return names[type] || type;
+        }
+
+        function toggleOptions() {
+            const type = document.getElementById('fieldType').value;
+            document.getElementById('optionsGroup').style.display = type === 'select' ? 'block' : 'none';
+        }
+
+        function showAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add Field';
+            document.getElementById('fieldForm').reset();
+            document.getElementById('fieldId').value = '';
+            document.getElementById('fieldModal').classList.add('active');
+            toggleOptions();
+        }
+
+        function editField(id) {
+            const field = fields.find(f => f.id === id);
+            if (!field) return;
+
+            document.getElementById('modalTitle').textContent = 'Edit Field';
+            document.getElementById('fieldId').value = field.id;
+            document.getElementById('fieldKey').value = field.field_key;
+            document.getElementById('fieldName').value = field.field_name;
+            document.getElementById('fieldType').value = field.field_type;
+            document.getElementById('fieldUnit').value = field.field_unit || '';
+            document.getElementById('isRequired').checked = !!field.is_required;
+            document.getElementById('isDisplay').checked = !!field.is_display_field;
+            document.getElementById('isVisual').checked = !!field.is_visual_field;
+            document.getElementById('sortOrder').value = field.sort_order || 10;
+
+            if (field.field_options) {
+                try {
+                    const opts = JSON.parse(field.field_options);
+                    document.getElementById('fieldOptions').value = Array.isArray(opts) ? opts.join('\n') : '';
+                } catch (e) {
+                    document.getElementById('fieldOptions').value = '';
+                }
+            }
+
+            toggleOptions();
+            document.getElementById('fieldModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('fieldModal').classList.remove('active');
+        }
+
+        async function saveField() {
+            const id = document.getElementById('fieldId').value;
+            const data = {
+                field_key: document.getElementById('fieldKey').value,
+                field_name: document.getElementById('fieldName').value,
+                field_type: document.getElementById('fieldType').value,
+                field_unit: document.getElementById('fieldUnit').value,
+                is_required: document.getElementById('isRequired').checked ? 1 : 0,
+                is_display_field: document.getElementById('isDisplay').checked ? 1 : 0,
+                is_visual_field: document.getElementById('isVisual').checked ? 1 : 0,
+                sort_order: parseInt(document.getElementById('sortOrder').value, 10) || 10
+            };
+
+            const options = document.getElementById('fieldOptions').value.trim();
+            if (options && data.field_type === 'select') {
+                data.field_options = options.split('\n').map(o => o.trim()).filter(Boolean);
+            }
+
+            setLoading(true);
+            try {
+                const url = id ? `/charging/admin/api/layers/fields/${id}` : `/charging/admin/api/layers/${layerId}/fields`;
+                const method = id ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method,
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+
+                const result = await res.json();
+                if (result.success) {
+                    notify('Saved', 'success');
+                    closeModal();
+                    loadFields();
+                } else {
+                    notify(`Save failed: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (e) {
+                notify(`Save failed: ${e.message}`, 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function deleteField(id) {
+            if (!confirm('Delete this field? Existing data may be affected.')) return;
+
+            setLoading(true);
+            try {
+                const res = await fetch(`/charging/admin/api/layers/fields/${id}`, {method: 'DELETE'});
+                const result = await res.json();
+                if (result.success) {
+                    notify('Deleted', 'success');
+                    loadFields();
+                } else {
+                    notify(`Delete failed: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (e) {
+                notify(`Delete failed: ${e.message}`, 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        layerId = getLayerIdFromUrl();
+        if (layerId) {
+            loadLayerInfo();
+            loadFields();
+        } else {
+            document.getElementById('fieldList').innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">X</div>
+                    <div>Please choose a layer type first</div>
+                    <a href="/charging/admin/layers" class="btn btn-primary" style="margin-top: 16px;">Back to layers</a>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
+

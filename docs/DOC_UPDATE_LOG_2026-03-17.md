@@ -28,3 +28,18 @@
 2. 按测试数据包规范准备 12 份 CSV 样本  
 3. 先执行 P0 链路（导入-定位-矫正-发布）联调  
 
+
+---
+
+## 2026-03-17 Admin Console Progress (Follow-up)
+- Completed UX hardening for admin core pages:
+  - rontend/admin/layers.html
+  - rontend/admin/regions.html
+  - rontend/admin/fields.html
+- Replaced blocking lert() feedback with non-blocking toast notifications.
+- Added global request loading state (progress cursor + unified in-flight handling).
+- Kept existing CRUD API contracts unchanged; no backend endpoint changes.
+- Fixed delete action parameter escaping issue in region list rendering.
+
+Next suggested target:
+- Apply the same toast/loading pattern to points.html and iz_config.html.
