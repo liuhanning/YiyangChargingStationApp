@@ -1,7 +1,7 @@
 # 项目进度报告 - 通用点位可视化后台管理系统
 
-**记录日期**: 2026-03-16
-**项目状态**: Phase 2 基本完成，进入 Phase 3 可视化增强阶段
+**记录日期**: 2026-03-17
+**项目状态**: Phase 3 可视化增强基本完成，进入完善阶段
 
 ---
 
@@ -14,10 +14,10 @@
 | **Phase 0** | 现有系统（充电站/加油站管理） | 100% | ✅ 已完成 |
 | **Phase 1** | 基础架构（数据库、服务层、API） | 100% | ✅ 已完成 |
 | **Phase 2** | 点位管理（CRUD、导入导出） | 95% | ✅ 基本完成 |
-| **Phase 3** | 可视化增强（规则配置、地图渲染） | 75% | ⚠️ 进行中 |
+| **Phase 3** | 可视化增强（规则配置、地图渲染） | 95% | ✅ 基本完成 |
 | **Phase 4** | 高级功能（边界绘制、空间分析） | 0% | 📋 未开始 |
 
-**整体进度：85%**
+**整体进度：95%**
 
 ---
 
@@ -137,6 +137,33 @@ point_visualization_rules:   8 条记录（各图层类型的可视化规则）
 
 ---
 
+### 2.5 统一门户集成（2026-03-16 新增）
+
+- [x] 修复 `/charging/admin/` 路由 404 问题
+- [x] 使用 DispatcherMiddleware 正确挂载充电子应用
+- [x] 移除 Flask  catch-all 路由冲突
+- [x] 所有路由测试通过：
+  - `/` : 200 (门户首页)
+  - `/industry/` : 200 (产业系统)
+  - `/tourism/` : 200 (低空旅游系统)
+  - `/charging/` : 200 (充换电系统)
+  - `/charging/admin/` : 200 (后台管理)
+  - `/charging/admin/regions` : 200 (地区管理)
+  - `/charging/admin/api/regions` : 200 (地区 API)
+
+### 2.6 统一门户静态文件修复（2026-03-17 新增）
+
+- [x] 修复 `StaticFileWSGI` 路径处理问题
+- [x] 使用 `PurePosixPath` 分割路径并分别清理每个组件
+- [x] 防止路径遍历攻击同时保留子目录结构
+- [x] 所有静态文件测试通过：
+  - `/assets/portal.css` : 200
+  - `/assets/portal.js` : 200
+  - `/industry/index.html` : 200
+  - `/tourism/index.html` : 200
+
+---
+
 ## 三、测试状态
 
 ### 3.1 测试结果
@@ -171,35 +198,27 @@ point_visualization_rules:   8 条记录（各图层类型的可视化规则）
 
 ### 4.1 高优先级（影响核心体验）
 
-#### 1. 地图编辑器 - 可视化规则应用
+#### 1. 地图编辑器 - 可视化规则应用 ✅ 已完成
 **文件**: `frontend/admin/map_editor.html`
-**位置**: 约第 700 行 `getPointStyle()` 函数
+**位置**: 约第 703 行 `getPointStyle()` 函数
 
-```javascript
-function getPointStyle(point, layer) {
-    // TODO: 应用可视化规则
-    // 目前返回默认样式
-    return {
-        color: layer.color || '#2563EB',
-        size: 12
-    };
-}
-```
+**状态**: ✅ 已完成
+- `getPointStyle()` 函数已实现，支持三种规则类型：
+  - `category`：分类映射（值→颜色/图标/大小）
+  - `size`：数值映射（值→大小，线性插值）
+  - `color`：连续色阶映射（数值→渐变色）
+- 规则加载逻辑已实现（`/admin/api/viz/rules/:layerTypeId`）
+- 点位渲染时自动应用可视化规则
 
-**影响**: 用户在 `viz_config.html` 配置的规则在地图上不生效
-**预计工时**: 2 小时
-
-#### 2. 地图编辑器 - 动态字段表单
+#### 2. 地图编辑器 - 动态字段表单 ✅ 已完成
 **文件**: `frontend/admin/map_editor.html`
-**位置**: 点位详情 modal 内
+**位置**: `openEditPanel()` 函数内
 
-```javascript
-// TODO: 加载动态字段并渲染表单
-// 根据图层类型的字段定义动态生成输入框
-```
-
-**影响**: 编辑点位时无法看到/编辑自定义字段（如面积、等级等）
-**预计工时**: 4 小时
+**状态**: ✅ 已完成
+- 根据图层类型的字段定义动态生成输入框
+- 支持字段类型：text、number、select、boolean
+- 编辑点位时显示所有自定义字段
+- 支持实时预览和更新
 
 ---
 
@@ -296,28 +315,34 @@ yiyang_wannian_chongdian/
 
 ### 7.1 近期（本周）
 
-1. **实现可视化规则前端应用** (2h)
-   - 修改 `map_editor.html` 的 `getPointStyle()` 函数
-   - 调用 `/admin/api/viz/rules/:layerTypeId` 获取规则
-   - 根据规则类型应用样式
+1. **修复统一门户路由问题** ✅ 已完成 (2026-03-16)
+   - 使用 DispatcherMiddleware 正确挂载 /charging 子应用
+   - 移除 Flask catch-all 路由冲突
+   - 所有路由测试通过
 
-2. **实现动态字段表单** (4h)
-   - 在点位详情 modal 中加载字段定义
-   - 根据字段类型渲染输入框（text/number/select/boolean）
-   - 保存时提交 attributes JSON
+2. **实现可视化规则前端应用** ✅ 已完成
+   - `getPointStyle()` 函数已实现
+   - 支持 category/size/color 三种规则类型
+   - 点位渲染时自动应用规则
 
-3. **修复拖拽编辑** (2h)
-   - 实现点位拖拽功能
-   - 拖拽后调用 API 更新坐标
+3. **实现动态字段表单** ✅ 已完成
+   - 根据图层类型动态生成输入框
+   - 支持 text/number/select/boolean 字段类型
+   - 编辑点位时显示所有自定义字段
+
+4. **完善地图编辑器剩余功能** (4h)
+   - 批量删除功能前端 UI
+   - 拖拽编辑点位时样式实时更新
+   - 完善前端错误提示和加载状态
 
 ---
 
 ### 7.2 短期（2 周内）
 
 1. **完善地图编辑器** (8h)
-   - 批量删除 UI
    - 点位筛选和搜索
    - 图层透明度调节
+   - 点位详情 modal 内编辑功能
 
 2. **编写 API 文档** (4h)
    - OpenAPI/Swagger 格式
